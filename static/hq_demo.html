@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>本部管理ポータル デモ | 訪問介護マネージャー</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root{--blue:#2563eb;--blue-dark:#1d4ed8;--blue-light:#dbeafe;--green:#16a34a;--amber:#d97706;--red:#dc2626}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Hiragino Sans','Yu Gothic UI','Meiryo',sans-serif;background:#eff6ff;min-height:100vh}
+.btn{display:inline-flex;align-items:center;justify-content:center;border-radius:10px;font-weight:700;cursor:pointer;border:none;padding:9px 18px;font-size:14px;transition:all .15s;gap:6px}
+.btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:var(--blue-dark)}
+.card{background:#fff;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.07);padding:18px;margin-bottom:14px}
+.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:16px;font-size:11px;font-weight:700}
+.demo-banner{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:13px;font-weight:600}
+.layout{display:flex;min-height:calc(100vh - 100px)}
+.sidebar{width:200px;flex-shrink:0;background:#fff;border-right:1px solid #e5e7eb;padding:14px 0}
+.sb-item{display:flex;align-items:center;gap:10px;padding:10px 18px;font-size:14px;font-weight:600;color:#6b7280;cursor:pointer;border-radius:0 24px 24px 0;margin-right:10px;transition:all .15s}
+.sb-item.active{background:var(--blue-light);color:var(--blue)}
+.main{flex:1;padding:24px;overflow-x:auto}
+.stat-box{text-align:center;padding:12px 8px;border-radius:10px;background:#f8fafc}
+.stat-num{font-size:22px;font-weight:700}
+.stat-label{font-size:10px;color:#6b7280;margin-top:2px}
+.office-card{border-left:4px solid var(--blue);background:#fff;border-radius:0 12px 12px 0;padding:14px;margin-bottom:10px;box-shadow:0 1px 6px rgba(0,0,0,.07)}
+.status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dot-done{background:#93c5fd}
+.dot-in{background:#22c55e;animation:pulse 2s infinite}
+.dot-plan{background:#d1d5db}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.section-title{font-size:16px;font-weight:700;color:#111827;margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:8px 10px;border-bottom:2px solid #dbeafe;background:#eff6ff;text-align:left}
+td{padding:7px 10px;border-bottom:1px solid #e5e7eb}
+tr:nth-child(even) td{background:#f8fafc}
+.tab-bar{display:flex;background:#f3f4f6;border-radius:10px;padding:3px;margin-bottom:16px}
+.tab-item{flex:1;text-align:center;padding:7px 4px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#6b7280}
+.tab-item.active{background:#fff;color:var(--blue);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+@media(max-width:768px){
+  .sidebar{display:none}
+  .main{padding:12px}
+}
+</style>
+</head>
+<body>
+
+<!-- デモバナー -->
+<div class="demo-banner">
+  <div>⚠️ これはデモ画面です。実際のデータではありません。</div>
+  <div style="display:flex;gap:10px;align-items:center">
+    <a href="/houmon/lp/" style="color:#fff;text-decoration:underline;font-size:12px">← LPに戻る</a>
+    <a href="/houmon/hq/auto-login/" class="btn" style="background:#fff;color:var(--amber);padding:6px 14px;font-size:12px">本番ログイン →</a>
+  </div>
+</div>
+
+<!-- ヘッダー -->
+<div style="background:var(--blue);color:#fff;padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between">
+  <div style="display:flex;align-items:center;gap:10px">
+    <span style="font-size:18px">🏢</span>
+    <div>
+      <div style="font-weight:700;font-size:14px">さくら訪問介護グループ 本部</div>
+      <div style="font-size:10px;opacity:.7">デモモード表示中</div>
+    </div>
+  </div>
+  <span class="tag" style="background:rgba(255,255,255,.2);color:#fff">デモ</span>
+</div>
+
+<div class="layout">
+  <!-- サイドバー -->
+  <div class="sidebar">
+    <div class="sb-item active" onclick="showTab('overview')">📊 事業所一覧</div>
+    <div class="sb-item" onclick="showTab('visits')">🚗 今日の訪問</div>
+    <div class="sb-item" onclick="showTab('incidents')">⚠️ ヒヤリハット</div>
+  </div>
+
+  <div class="main">
+
+    <!-- 事業所ダッシュボード -->
+    <div id="tab-overview">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="section-title" style="margin:0">事業所別ダッシュボード</div>
+        <div style="font-size:12px;color:#9ca3af">集計日: 本日</div>
+      </div>
+
+      <!-- 北区 -->
+      <div class="office-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+          <div style="font-weight:700;font-size:15px">北区ステーション</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+          <div class="stat-box"><div class="stat-num" style="color:var(--blue)">8</div><div class="stat-label">今日の予定</div></div>
+          <div class="stat-box"><div class="stat-num" style="color:#22c55e">3</div><div class="stat-label">訪問中🟢</div></div>
+          <div class="stat-box"><div class="stat-num" style="color:#60a5fa">4</div><div class="stat-label">完了</div></div>
+          <div class="stat-box"><div class="stat-num" style="color:#9ca3af">12</div><div class="stat-label">利用者数</div></div>
+        </div>
+      </div>
+
+      <!-- 南区 -->
+      <div class="office-card" style="border-color:#dc2626">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+          <div style="font-weight:700;font-size:15px">南区ステーション</div>
+          <span class="tag" style="background:#fee2e2;color:#991b1b">🔴 緊急連絡 1件</span>
+        </div>
+        <div style="background:#fee2e2;border-left:3px solid #dc2626;border-radius:0 8px 8px 0;padding:8px 12px;margin-bottom:10px;font-size:12px;color:#991b1b">
+          ⚠️【緊急】田中ヘルパーより：山田様、玄関で転倒（軽傷）。処置済み。ご家族への連絡お願いします。
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+          <div class="stat-box"><div class="stat-num" style="color:var(--blue)">6</div><div class="stat-label">今日の予定</div></div>
+          <div class="stat-box"><div class="stat-num" style="color:#22c55e">2</div><div class="stat-label">訪問中🟢</div></div>
+          <div class="stat-box"><div class="stat-num" style="color:#60a5fa">3</div><div class="stat-label">完了</div></div>
+          <div class="stat-box"><div class="stat-num" style="color:#9ca3af">9</div><div class="stat-label">利用者数</div></div>
+        </div>
+      </div>
+
+      <!-- 西区 -->
+      <div class="office-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+          <div style="font-weight:700;font-size:15px">西区ステーション</div>
+          <span class="tag" style="background:#fef3c7;color:#92400e">⚠️ 今月ヒヤリ 2件</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+          <div class="stat-box"><div class="stat-num" style="color:var(--blue)">5</div><div class="stat-label">今日の予定</div></div>
+          <div class="stat-box"><div class="stat-num" style="color:#22c55e">1</div><div class="stat-label">訪問中🟢</div></div>
+          <div class="stat-box"><div class="stat-num" style="color:#60a5fa">2</div><div class="stat-label">完了</div></div>
+          <div class="stat-box"><div class="stat-num" style="color:#9ca3af">8</div><div class="stat-label">利用者数</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 今日の訪問状況 -->
+    <div id="tab-visits" class="hidden" style="display:none">
+      <div class="section-title">今日の訪問状況（全事業所）</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="card" style="padding:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="status-dot dot-done"></div>
+              <span style="font-weight:700">山田 花子 様</span>
+              <span class="tag" style="background:#dbeafe;color:#1d4ed8;font-size:11px">完了</span>
+            </div>
+            <span style="font-size:12px;color:#9ca3af">9:00〜10:00</span>
+          </div>
+          <div style="font-size:12px;color:#6b7280">👤 田中 美咲 ｜ 身体介護 ｜ 北区ステーション</div>
+          <div style="font-size:11px;color:#2563eb;margin-top:4px">✓ 完了: 9:03〜9:58 ｜ 入浴介助・排泄介助</div>
+        </div>
+        <div class="card" style="padding:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="status-dot dot-in"></div>
+              <span style="font-weight:700">佐藤 よし 様</span>
+              <span class="tag" style="background:#dcfce7;color:#166534;font-size:11px">訪問中🟢</span>
+            </div>
+            <span style="font-size:12px;color:#9ca3af">10:00〜11:30</span>
+          </div>
+          <div style="font-size:12px;color:#6b7280">👤 鈴木 陽子 ｜ 身体+生活 ｜ 北区ステーション</div>
+          <div style="font-size:11px;color:#16a34a;margin-top:4px">✓ チェックイン: 10:05</div>
+        </div>
+        <div class="card" style="padding:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="status-dot dot-plan"></div>
+              <span style="font-weight:700">鈴木 正男 様</span>
+              <span class="tag" style="background:#f1f5f9;color:#4b5563;font-size:11px">予定</span>
+            </div>
+            <span style="font-size:12px;color:#9ca3af">13:00〜14:00</span>
+          </div>
+          <div style="font-size:12px;color:#6b7280">👤 高橋 浩二 ｜ 身体介護 ｜ 南区ステーション</div>
+        </div>
+        <div class="card" style="padding:12px;border-left:4px solid #dc2626">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="status-dot dot-done"></div>
+              <span style="font-weight:700">山田 一郎 様</span>
+              <span class="tag" style="background:#dbeafe;color:#1d4ed8;font-size:11px">完了</span>
+            </div>
+            <span style="font-size:12px;color:#9ca3af">9:30〜10:30</span>
+          </div>
+          <div style="font-size:12px;color:#6b7280">👤 田中 美咲 ｜ 生活援助 ｜ 南区ステーション</div>
+          <div style="font-size:11px;color:#dc2626;margin-top:4px">⚠️ 訪問終了後に転倒発生（玄関）→ 緊急連絡送信済み</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ヒヤリハット -->
+    <div id="tab-incidents" class="hidden" style="display:none">
+      <div class="section-title">ヒヤリハット・事故一覧（今月）</div>
+      <table>
+        <thead><tr>
+          <th>事業所</th><th>発生日</th><th>種類</th><th>レベル</th><th>対象</th><th>状況（抜粋）</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td>南区ステーション</td><td>本日</td>
+            <td><span class="tag" style="background:#fee2e2;color:#991b1b">転倒・転落</span></td>
+            <td><span class="tag" style="background:#fed7aa;color:#9a3412">事故Lv1</span></td>
+            <td>山田 一郎様</td>
+            <td>玄関で転倒。右膝擦り傷。処置済み。</td>
+          </tr>
+          <tr>
+            <td>西区ステーション</td><td>3日前</td>
+            <td><span class="tag" style="background:#fef3c7;color:#92400e">誤嚥・窒息</span></td>
+            <td><span class="tag" style="background:#fef3c7;color:#92400e">ヒヤリ</span></td>
+            <td>高橋 幸子様</td>
+            <td>昼食時にむせ込み。自力回復。食形態見直し検討中。</td>
+          </tr>
+          <tr>
+            <td>北区ステーション</td><td>1週間前</td>
+            <td><span class="tag" style="background:#fef3c7;color:#92400e">転倒・転落</span></td>
+            <td><span class="tag" style="background:#fef3c7;color:#92400e">ヒヤリ</span></td>
+            <td>田中 義雄様</td>
+            <td>廊下でバランスを崩す。転倒は免れた。見守り強化。</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="text-align:center;margin-top:16px">
+        <div style="background:#f1f5f9;border-radius:10px;padding:14px;font-size:13px;color:#64748b;display:inline-block">
+          📥 実際の画面ではCSVでダウンロードできます
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 下部CTA -->
+<div style="background:var(--blue);color:#fff;padding:32px 24px;text-align:center">
+  <div style="font-size:16px;font-weight:700;margin-bottom:8px">本部管理ポータルを実際に使ってみる</div>
+  <div style="font-size:13px;opacity:.8;margin-bottom:16px">デモアカウントでそのままログインできます（honbu / honbu2025）</div>
+  <a href="/houmon/hq/auto-login/" class="btn btn-primary" style="background:#fff;color:var(--blue);padding:12px 28px;font-size:15px">🏢 本番ポータルへ進む →</a>
+</div>
+
+<script>
+function showTab(name) {
+  ['overview','visits','incidents'].forEach(t => {
+    const el = document.getElementById('tab-'+t);
+    el.style.display = t===name ? 'block' : 'none';
+  });
+  document.querySelectorAll('.sb-item').forEach((el,i) => {
+    el.classList.toggle('active', ['overview','visits','incidents'][i] === name);
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>現場アプリ デモ | 訪問介護マネージャー</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root{--blue:#2563eb;--blue-dark:#1d4ed8;--blue-light:#dbeafe;--green:#16a34a;--amber:#d97706;--red:#dc2626}
+*{-webkit-tap-highlight-color:transparent;box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Hiragino Sans','Yu Gothic UI',sans-serif;background:#eff6ff;min-height:100vh}
+.demo-banner{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;font-weight:600}
+.top-bar{background:#fff;border-bottom:1px solid #e5e7eb;padding:11px 16px;display:flex;align-items:center;justify-content:space-between}
+.btn{display:flex;align-items:center;justify-content:center;border-radius:12px;font-weight:700;cursor:pointer;border:none;min-height:48px;padding:0 16px;font-size:15px;gap:6px;transition:all .15s}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-green{background:#dcfce7;color:var(--green)}
+.card{background:#fff;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,.07);padding:16px;margin-bottom:12px}
+.tag{display:inline-flex;align-items:center;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600}
+.kpi-card{background:#fff;border-radius:16px;padding:16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.kpi-num{font-size:30px;font-weight:700;color:var(--blue)}
+.kpi-label{font-size:11px;color:#6b7280;margin-top:2px}
+.visit-card{background:#fff;border-radius:14px;box-shadow:0 2px 6px rgba(0,0,0,.07);padding:14px;margin-bottom:10px}
+.status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dot-in{background:#22c55e;animation:pulse 2s infinite}
+.dot-plan{background:#d1d5db}
+.dot-done{background:#93c5fd}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.page{display:none;padding:12px 12px 80px;max-width:600px;margin:0 auto}
+.page.active{display:block}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e5e7eb;display:flex;z-index:100}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;cursor:pointer;color:#9ca3af;font-size:10px;font-weight:600;gap:2px}
+.nav-item.active{color:var(--blue)}
+.nav-item svg{width:22px;height:22px}
+.section-title{font-size:18px;font-weight:700;color:#111827;margin-bottom:12px}
+.service-chip{display:inline-flex;align-items:center;padding:6px 12px;border-radius:8px;font-size:13px;font-weight:600;border:2px solid #e5e7eb;background:#fff;margin:3px;cursor:pointer}
+.service-chip.selected{background:#dbeafe;border-color:#2563eb;color:#1d4ed8}
+.cta-box{background:linear-gradient(135deg,var(--blue),var(--blue-dark));border-radius:16px;padding:20px;color:#fff;text-align:center;margin-top:16px}
+</style>
+</head>
+<body>
+
+<div class="demo-banner">
+  <div>⚠️ デモ画面 — 実際のデータではありません</div>
+  <div style="display:flex;gap:8px">
+    <a href="/houmon/lp/" style="color:#fff;text-decoration:underline;font-size:11px">LP↗</a>
+    <a href="/houmon/hq/demo/" style="color:#fff;text-decoration:underline;font-size:11px">本部デモ↗</a>
+    <a href="/houmon/auto-login/" style="background:#fff;color:var(--amber);padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none">ログインして試す</a>
+  </div>
+</div>
+
+<div class="top-bar">
+  <div>
+    <div class="font-bold text-gray-800 text-base">さくら訪問介護ステーション</div>
+    <div class="text-xs text-gray-400">管理者ダッシュボード</div>
+  </div>
+  <span class="tag" style="background:#fef3c7;color:#92400e">デモ</span>
+</div>
+
+<!-- ダッシュボード -->
+<div id="page-dashboard" class="page active">
+  <div class="grid grid-cols-2 gap-3 mb-4">
+    <div class="kpi-card"><div class="kpi-num">5</div><div class="kpi-label">今日の訪問予定</div></div>
+    <div class="kpi-card"><div class="kpi-num text-green-500">1</div><div class="kpi-label">訪問中🟢</div></div>
+    <div class="kpi-card"><div class="kpi-num text-blue-400">2</div><div class="kpi-label">完了</div></div>
+    <div class="kpi-card"><div class="kpi-num text-red-500">1</div><div class="kpi-label">未読連絡</div></div>
+  </div>
+  <div class="section-title">今日の訪問状況</div>
+
+  <div class="visit-card">
+    <div class="flex justify-between items-start mb-2">
+      <div class="flex items-center gap-2"><div class="status-dot dot-done"></div><span class="font-bold">山田 花子 様</span><span class="tag" style="background:#dbeafe;color:#1d4ed8;font-size:11px">完了</span></div>
+      <span class="text-sm text-gray-500">9:00〜10:00</span>
+    </div>
+    <div class="text-xs text-gray-500 mb-1">👤 田中 美咲 ｜ 身体介護</div>
+    <div class="text-xs text-blue-600">✓ 9:03〜9:58 完了 ｜ 入浴介助・排泄介助</div>
+  </div>
+
+  <div class="visit-card">
+    <div class="flex justify-between items-start mb-2">
+      <div class="flex items-center gap-2"><div class="status-dot dot-done"></div><span class="font-bold">田中 義雄 様</span><span class="tag" style="background:#dbeafe;color:#1d4ed8;font-size:11px">完了</span></div>
+      <span class="text-sm text-gray-500">9:30〜10:30</span>
+    </div>
+    <div class="text-xs text-gray-500 mb-1">👤 山本 健太 ｜ 生活援助</div>
+    <div class="text-xs text-blue-600">✓ 9:32〜10:28 完了 ｜ 掃除・調理</div>
+  </div>
+
+  <div class="visit-card" style="border-left:4px solid #22c55e">
+    <div class="flex justify-between items-start mb-2">
+      <div class="flex items-center gap-2"><div class="status-dot dot-in"></div><span class="font-bold">佐藤 よし 様</span><span class="tag" style="background:#dcfce7;color:#166534;font-size:11px">訪問中🟢</span></div>
+      <span class="text-sm text-gray-500">10:00〜11:30</span>
+    </div>
+    <div class="text-xs text-gray-500 mb-2">👤 鈴木 陽子 ｜ 身体+生活</div>
+    <div class="text-xs text-green-600">✓ チェックイン: 10:05</div>
+  </div>
+
+  <div class="visit-card">
+    <div class="flex justify-between items-start mb-2">
+      <div class="flex items-center gap-2"><div class="status-dot dot-plan"></div><span class="font-bold">鈴木 正男 様</span><span class="tag" style="background:#f1f5f9;color:#4b5563;font-size:11px">予定</span></div>
+      <span class="text-sm text-gray-500">13:00〜14:00</span>
+    </div>
+    <div class="text-xs text-gray-500 mb-2">👤 田中 美咲 ｜ 身体介護</div>
+    <div class="btn btn-green w-full text-sm py-2 opacity-50 cursor-default" style="min-height:40px">チェックイン（デモのため無効）</div>
+  </div>
+
+  <div class="card mt-4" style="background:#fee2e2;border-left:4px solid #dc2626">
+    <div class="font-bold text-red-700 text-sm mb-1">🔴【緊急】鈴木 陽子より</div>
+    <div class="text-sm text-red-600">佐藤様、昼食時にむせ込みがありました。自力回復しましたが食形態の見直しをお願いします。</div>
+  </div>
+
+  <div class="cta-box">
+    <div class="font-bold text-lg mb-2">実際に試してみる</div>
+    <p class="text-sm opacity-80 mb-3">チェックイン・記録入力・連絡送信など全機能を無料で体験できます</p>
+    <a href="/houmon/auto-login/" class="btn btn-primary" style="background:#fff;color:var(--blue);display:inline-flex;padding:12px 24px">🚀 ログインして試す →</a>
+  </div>
+</div>
+
+<!-- チェックイン画面（ヘルパービュー） -->
+<div id="page-checkin" class="page">
+  <div class="section-title">📱 ヘルパーの操作イメージ</div>
+  <div class="card" style="background:#dbeafe;border:2px solid #2563eb;margin-bottom:16px">
+    <div class="font-bold text-blue-800">佐藤 よし 様</div>
+    <div class="text-sm text-blue-600">10:00〜11:30 ｜ 身体+生活援助</div>
+    <div class="text-xs text-gray-500 mt-1">📍 ○○市西区桜台5-6</div>
+  </div>
+  <div class="btn btn-green w-full mb-4" style="min-height:64px;font-size:18px;border-radius:16px;font-weight:800;cursor:default;opacity:.7">
+    📍 チェックイン（訪問開始）
+  </div>
+  <div class="card">
+    <div class="font-bold text-gray-700 mb-3">提供した身体介護サービス</div>
+    <div class="flex flex-wrap">
+      <span class="service-chip selected">入浴介助</span>
+      <span class="service-chip selected">排泄介助</span>
+      <span class="service-chip">食事介助</span>
+      <span class="service-chip">口腔ケア</span>
+      <span class="service-chip selected">移動・移乗介助</span>
+      <span class="service-chip">体位変換</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="font-bold text-gray-700 mb-3">提供した生活援助サービス</div>
+    <div class="flex flex-wrap">
+      <span class="service-chip selected">掃除・整理整頓</span>
+      <span class="service-chip">洗濯・乾燥</span>
+      <span class="service-chip selected">調理・配膳</span>
+      <span class="service-chip">買い物代行</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="font-bold text-gray-700 mb-2">体調</div>
+    <div class="flex gap-2">
+      <span class="service-chip selected">😊 良好</span>
+      <span class="service-chip">😐 普通</span>
+      <span class="service-chip">😔 不調</span>
+      <span class="service-chip">🚨 要注意</span>
+    </div>
+  </div>
+  <div class="btn btn-primary w-full" style="min-height:64px;font-size:18px;border-radius:16px;opacity:.7;cursor:default">✅ チェックアウト（訪問完了）</div>
+  <p class="text-center text-gray-400 text-xs mt-3">※ デモ表示のため実際の送信はできません</p>
+  <div class="cta-box mt-4">
+    <div class="font-bold mb-2">実際に操作してみる</div>
+    <a href="/houmon/auto-login/" class="btn" style="background:#fff;color:var(--blue);display:inline-flex;padding:10px 20px">ログインして試す →</a>
+  </div>
+</div>
+
+<!-- ボトムナビ -->
+<nav class="bottom-nav">
+  <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+    ダッシュボード
+  </div>
+  <div class="nav-item" onclick="showPage('checkin')" id="nav-checkin">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+    記録入力
+  </div>
+  <div class="nav-item" onclick="window.location='/houmon/hq/demo/'" id="nav-hq">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+    本部デモ
+  </div>
+</nav>
+
+<script>
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.getElementById('nav-'+name)?.classList.add('active');
+}
+document.querySelectorAll('.service-chip').forEach(chip=>{
+  chip.addEventListener('click',()=>chip.classList.toggle('selected'));
+});
+</script>
+</body>
+</html>

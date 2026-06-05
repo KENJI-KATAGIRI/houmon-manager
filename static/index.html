@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>訪問介護マネージャー</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root{--blue:#2563eb;--blue-light:#dbeafe;--blue-dark:#1d4ed8;--teal:#0d9488;--teal-light:#ccfbf1;--amber:#d97706;--red:#dc2626;--green:#16a34a}
+*{-webkit-tap-highlight-color:transparent;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic UI',sans-serif;background:#eff6ff;min-height:100vh}
+.btn{display:flex;align-items:center;justify-content:center;border-radius:12px;font-weight:600;cursor:pointer;transition:all .15s;border:none;outline:none;min-height:48px;padding:0 16px;font-size:15px;gap:6px}
+.btn-primary{background:var(--blue);color:#fff}.btn-primary:active{background:var(--blue-dark)}
+.btn-green{background:#dcfce7;color:var(--green)}.btn-green:active{background:#bbf7d0}
+.btn-red{background:#fee2e2;color:var(--red)}.btn-red:active{background:#fca5a5}
+.btn-outline{background:#fff;color:var(--blue);border:2px solid var(--blue)}
+.btn-amber{background:#fef3c7;color:var(--amber)}
+.card{background:#fff;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,.07);padding:16px;margin-bottom:12px}
+.tag{display:inline-flex;align-items:center;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600}
+.tag-blue{background:var(--blue-light);color:var(--blue-dark)}
+.tag-green{background:#dcfce7;color:var(--green)}
+.tag-amber{background:#fef3c7;color:var(--amber)}
+.tag-red{background:#fee2e2;color:var(--red)}
+.tag-gray{background:#f3f4f6;color:#4b5563}
+input,select,textarea{width:100%;border:1.5px solid #d1d5db;border-radius:10px;padding:10px 12px;font-size:15px;outline:none;background:#fff;font-family:inherit}
+input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:block}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e5e7eb;display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;cursor:pointer;color:#9ca3af;font-size:10px;font-weight:600;gap:2px}
+.nav-item.active{color:var(--blue)}
+.nav-item svg{width:22px;height:22px}
+.page{display:none;padding:12px 12px 80px;max-width:600px;margin:0 auto}
+.page.active{display:block}
+.top-bar{background:#fff;border-bottom:1px solid #e5e7eb;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.section-title{font-size:18px;font-weight:700;color:#111827;margin-bottom:12px}
+.kpi-card{background:#fff;border-radius:16px;padding:16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.kpi-num{font-size:30px;font-weight:700;color:var(--blue)}
+.kpi-label{font-size:11px;color:#6b7280;margin-top:2px}
+.visit-card{background:#fff;border-radius:14px;box-shadow:0 2px 6px rgba(0,0,0,.07);padding:14px;margin-bottom:10px}
+.status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.status-planned{background:#cbd5e1}
+.status-in{background:#22c55e;animation:pulse 2s infinite}
+.status-done{background:#93c5fd}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-end}
+.modal-overlay.open{display:flex}
+.modal-sheet{background:#fff;border-radius:20px 20px 0 0;width:100%;max-height:90vh;overflow-y:auto;padding:20px}
+.modal-handle{width:40px;height:4px;border-radius:2px;background:#d1d5db;margin:0 auto 16px}
+.hidden{display:none!important}
+.spinner{border:3px solid #e5e7eb;border-top:3px solid var(--blue);border-radius:50%;width:32px;height:32px;animation:spin .8s linear infinite;margin:24px auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+.badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;font-weight:700;padding:0 4px}
+.msg-bubble{padding:12px;border-radius:12px;margin-bottom:8px;font-size:14px}
+.msg-sasa{background:#dbeafe;border-left:4px solid var(--blue)}
+.msg-helper{background:#f0fdf4;border-left:4px solid var(--green)}
+.msg-urgent{background:#fee2e2;border-left:4px solid var(--red)}
+.checkin-btn{min-height:64px;font-size:18px;border-radius:16px;font-weight:800}
+.service-check{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f9fafb;border-radius:10px;margin-bottom:6px;cursor:pointer}
+.service-check input[type=checkbox]{width:20px;height:20px;accent-color:var(--blue)}
+.helper-card{background:#fff;border-radius:14px;box-shadow:0 2px 6px rgba(0,0,0,.07);padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer}
+.avatar{width:44px;height:44px;border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0}
+.tab-bar{display:flex;background:#f3f4f6;border-radius:10px;padding:3px;margin-bottom:14px}
+.tab-item{flex:1;text-align:center;padding:7px 4px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#6b7280}
+.tab-item.active{background:#fff;color:var(--blue);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.timeline-item{display:flex;gap:12px;margin-bottom:16px}
+.timeline-dot{width:12px;height:12px;border-radius:50%;background:var(--blue);flex-shrink:0;margin-top:4px}
+.timeline-line{width:2px;background:#e5e7eb;flex-shrink:0;margin:4px auto 0;height:calc(100% + 8px)}
+</style>
+</head>
+<body>
+
+<!-- ログイン -->
+<div id="loginScreen" class="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-b from-blue-700 to-blue-900">
+  <div class="w-full max-w-sm">
+    <div class="text-center mb-8">
+      <div class="text-5xl mb-3">🚗</div>
+      <h1 class="text-2xl font-bold text-white">訪問介護マネージャー</h1>
+      <p class="text-blue-200 text-sm mt-2">サ責とヘルパーをつなぐ業務管理</p>
+    </div>
+    <div class="bg-white rounded-2xl p-6 shadow-xl">
+      <div class="tab-bar mb-4" id="authTab">
+        <div class="tab-item active" onclick="switchAuthTab('login')">ログイン</div>
+        <div class="tab-item" onclick="switchAuthTab('register')">新規登録</div>
+      </div>
+      <div id="loginForm">
+        <div class="mb-3"><label>ユーザー名</label><input id="loginUser" type="text" placeholder="事業所ID"></div>
+        <div class="mb-4"><label>パスワード</label><input id="loginPass" type="password" placeholder="パスワード"></div>
+        <button class="btn btn-primary w-full" onclick="doLogin()">ログイン</button>
+      </div>
+      <div id="registerForm" class="hidden">
+        <div class="mb-3"><label>事業所名</label><input id="regOffice" type="text" placeholder="〇〇訪問介護ステーション"></div>
+        <div class="mb-3"><label>ユーザー名（英数字）</label><input id="regUser" type="text" placeholder="station_sakura"></div>
+        <div class="mb-3"><label>メールアドレス</label><input id="regEmail" type="email" placeholder="info@example.com"></div>
+        <div class="mb-4"><label>パスワード</label><input id="regPass" type="password" placeholder="8文字以上"></div>
+        <button class="btn btn-primary w-full" onclick="doRegister()">30日間無料で始める</button>
+      </div>
+      <p id="loginError" class="text-red-500 text-sm text-center mt-3 hidden"></p>
+    </div>
+  </div>
+</div>
+
+<!-- メインアプリ -->
+<div id="app" class="hidden">
+  <!-- トップバー -->
+  <div class="top-bar">
+    <div>
+      <div class="font-bold text-gray-800 text-base" id="topOfficeName">事業所名</div>
+      <div class="text-xs text-gray-400" id="topDate"></div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span id="planBadge" class="tag tag-blue text-xs">トライアル</span>
+      <button onclick="doLogout()" class="text-gray-400 text-xs">ログアウト</button>
+    </div>
+  </div>
+
+  <!-- サ責ダッシュボード -->
+  <div id="page-dashboard" class="page active">
+    <div class="grid grid-cols-2 gap-3 mb-4">
+      <div class="kpi-card"><div class="kpi-num" id="kpiPlans">-</div><div class="kpi-label">今日の訪問予定</div></div>
+      <div class="kpi-card"><div class="kpi-num text-green-500" id="kpiDone">-</div><div class="kpi-label">完了</div></div>
+      <div class="kpi-card"><div class="kpi-num text-amber-500" id="kpiIn">-</div><div class="kpi-label">訪問中</div></div>
+      <div class="kpi-card"><div class="kpi-num text-red-500" id="kpiMsg">-</div><div class="kpi-label">未読連絡</div></div>
+    </div>
+    <div class="flex justify-between items-center mb-3">
+      <div class="section-title mb-0">今日の訪問状況</div>
+      <button class="btn btn-amber text-sm px-3 py-2" onclick="generateAiSummary()" id="aiSummaryBtn">✨ AI日報生成</button>
+    </div>
+    <div id="aiSummaryBanner" class="hidden card mb-3 bg-blue-50 border border-blue-200">
+      <div class="flex justify-between items-center mb-1">
+        <span class="font-bold text-blue-700 text-sm">✨ AI日報サマリー</span>
+        <button onclick="document.getElementById('aiSummaryBanner').classList.add('hidden')" class="text-blue-400 text-xs">✕</button>
+      </div>
+      <div id="aiSummaryText" class="text-blue-800 text-sm whitespace-pre-wrap"></div>
+    </div>
+    <div id="todayVisits"></div>
+    <div class="section-title mt-4">最新の連絡</div>
+    <div id="dashMessages"></div>
+    <button class="btn btn-outline w-full mt-2" onclick="showPage('messages')">連絡を全て見る →</button>
+  </div>
+
+  <!-- スケジュール（チェックイン/アウト） -->
+  <div id="page-schedule" class="page">
+    <div class="section-title">本日の訪問スケジュール</div>
+    <div class="card mb-3 bg-blue-50 border border-blue-200">
+      <div class="font-bold text-blue-800 text-sm mb-1">🚗 ヘルパーの方へ</div>
+      <p class="text-xs text-blue-700">訪問先に着いたら「チェックイン」、終わったら「チェックアウト」してください。</p>
+    </div>
+    <div id="scheduleList"></div>
+    <button class="btn btn-primary w-full mt-3" onclick="showPage('plan-add')">+ 訪問予定を追加</button>
+  </div>
+
+  <!-- チェックイン/アウト詳細 -->
+  <div id="page-visit" class="page">
+    <button class="btn btn-outline w-full mb-3" onclick="showPage('schedule')">← 戻る</button>
+    <div id="visitDetail"></div>
+  </div>
+
+  <!-- 訪問予定追加 -->
+  <div id="page-plan-add" class="page">
+    <button class="btn btn-outline w-full mb-3" onclick="showPage('schedule')">← 戻る</button>
+    <div class="section-title">訪問予定を追加</div>
+    <div class="card">
+      <div class="mb-3"><label>利用者</label><select id="planClient"><option value="">-- 選択 --</option></select></div>
+      <div class="mb-3"><label>担当ヘルパー</label><select id="planHelper"><option value="">-- 選択 --</option></select></div>
+      <div class="grid grid-cols-2 gap-2 mb-3">
+        <div><label>訪問日</label><input type="date" id="planDate"></div>
+        <div><label>サービス種別</label>
+          <select id="planType">
+            <option value="body">身体介護</option>
+            <option value="life">生活援助</option>
+            <option value="both">身体+生活</option>
+            <option value="accompany">通院等乗降</option>
+          </select>
+        </div>
+        <div><label>開始時刻</label><input type="time" id="planStart"></div>
+        <div><label>終了時刻</label><input type="time" id="planEnd"></div>
+      </div>
+      <div class="mb-3"><label>メモ</label><textarea id="planNotes" rows="2" placeholder="注意点など"></textarea></div>
+      <button class="btn btn-primary w-full" onclick="submitPlan()">追加する</button>
+    </div>
+  </div>
+
+  <!-- 利用者管理 -->
+  <div id="page-clients" class="page">
+    <div class="flex justify-between items-center mb-3">
+      <div class="section-title mb-0">利用者管理</div>
+      <button class="btn btn-primary px-4 py-2 text-sm" onclick="openClientModal()">+ 追加</button>
+    </div>
+    <input type="search" placeholder="名前・住所で検索" oninput="filterClients(this.value)" class="mb-3">
+    <div id="clientList"></div>
+  </div>
+
+  <!-- 連絡（サ責↔ヘルパー） -->
+  <div id="page-messages" class="page">
+    <div class="flex justify-between items-center mb-3">
+      <div class="section-title mb-0">連絡板</div>
+      <button class="btn btn-outline text-sm px-3 py-2" onclick="readAllMessages()">全て既読</button>
+    </div>
+    <div class="card mb-3">
+      <div class="font-bold text-gray-700 mb-3">メッセージを送る</div>
+      <div class="grid grid-cols-2 gap-2 mb-2">
+        <div>
+          <label>送信者種別</label>
+          <select id="msgSenderType">
+            <option value="sasa">サービス提供責任者</option>
+            <option value="helper">ヘルパー</option>
+          </select>
+        </div>
+        <div><label>送信者名</label><select id="msgSenderName"><option value="">-- 選択 --</option></select></div>
+      </div>
+      <div class="mb-2">
+        <label>関連する利用者（任意）</label>
+        <select id="msgClient"><option value="">-- なし --</option></select>
+      </div>
+      <div class="mb-2">
+        <label>優先度</label>
+        <div class="flex gap-2">
+          <button class="btn flex-1 text-xs" style="background:#dbeafe;color:#1d4ed8" data-priority="normal" onclick="selectMsgPriority('normal',this)">通常</button>
+          <button class="btn flex-1 text-xs" data-priority="urgent" onclick="selectMsgPriority('urgent',this)">緊急</button>
+        </div>
+      </div>
+      <textarea id="msgContent" rows="3" placeholder="連絡内容を入力..."></textarea>
+      <button class="btn btn-primary w-full mt-3" onclick="submitMessage()">送信する</button>
+    </div>
+    <div id="messageList"></div>
+  </div>
+
+  <!-- ヒヤリハット -->
+  <div id="page-incidents" class="page">
+    <div class="flex justify-between items-center mb-3">
+      <div class="section-title mb-0">ヒヤリハット・事故報告</div>
+      <button class="btn btn-primary px-3 py-2 text-sm" onclick="openIncidentModal()">+ 記録</button>
+    </div>
+    <div id="incidentList"></div>
+  </div>
+
+  <!-- メニュー -->
+  <div id="page-menu" class="page">
+    <div class="section-title">メニュー</div>
+    <div class="grid grid-cols-2 gap-3">
+      <button class="card text-center cursor-pointer" onclick="showPage('clients')">
+        <div class="text-3xl mb-1">👥</div><div class="font-bold text-sm">利用者管理</div>
+      </button>
+      <button class="card text-center cursor-pointer" onclick="showPage('helper-manage')">
+        <div class="text-3xl mb-1">🚗</div><div class="font-bold text-sm">ヘルパー管理</div>
+      </button>
+      <button class="card text-center cursor-pointer" onclick="showPage('incidents')">
+        <div class="text-3xl mb-1">⚠️</div><div class="font-bold text-sm">ヒヤリハット</div>
+      </button>
+      <button class="card text-center cursor-pointer" onclick="showPage('export')">
+        <div class="text-3xl mb-1">📥</div><div class="font-bold text-sm">データ出力</div>
+      </button>
+      <button class="card text-center cursor-pointer" onclick="showPage('settings')">
+        <div class="text-3xl mb-1">⚙️</div><div class="font-bold text-sm">設定</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- ヘルパー管理 -->
+  <div id="page-helper-manage" class="page">
+    <div class="flex justify-between items-center mb-3">
+      <div class="section-title mb-0">ヘルパー管理</div>
+      <button class="btn btn-primary px-4 py-2 text-sm" onclick="openHelperModal()">+ 追加</button>
+    </div>
+    <div id="helperList"></div>
+  </div>
+
+  <!-- エクスポート -->
+  <div id="page-export" class="page">
+    <div class="section-title">データ出力</div>
+    <div class="card mb-3 bg-blue-50 border border-blue-200">
+      <div class="font-bold text-blue-800 text-sm mb-1">📊 CSV出力</div>
+      <p class="text-xs text-blue-700">訪問記録をCSVで出力できます。サービス実施記録の月次まとめに活用してください。</p>
+    </div>
+    <div class="mb-3">
+      <label>出力する年月</label>
+      <div class="grid grid-cols-2 gap-2">
+        <select id="exportYear"></select>
+        <select id="exportMonth">
+          <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option>
+          <option value="4">4月</option><option value="5">5月</option><option value="6">6月</option>
+          <option value="7">7月</option><option value="8">8月</option><option value="9">9月</option>
+          <option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
+        </select>
+      </div>
+    </div>
+    <div class="card mb-3">
+      <div class="font-bold text-gray-700 mb-1">📋 訪問記録サマリー</div>
+      <p class="text-xs text-gray-500 mb-3">日付・利用者・担当者・開始終了時刻・提供サービス・体調を一覧出力</p>
+      <button class="btn btn-primary w-full" onclick="downloadCsv('visit-records','訪問記録')">ダウンロード</button>
+    </div>
+    <div class="card" style="border:2px solid #2563eb">
+      <div class="flex items-center gap-2 mb-1">
+        <span class="text-xl">🔗</span>
+        <div class="font-bold text-blue-700">請求連携CSV（NEW）</div>
+      </div>
+      <p class="text-xs text-gray-500 mb-2">サービス種別コード・提供時間（分）・要介護度を含む、既存の介護請求ソフトへの転記に使えるフォーマットで出力します。</p>
+      <div class="card mb-2" style="background:#eff6ff;padding:10px">
+        <div class="text-xs text-blue-700 font-bold mb-1">含まれる項目：</div>
+        <div class="text-xs text-blue-600">サービス提供日・利用者名・要介護度・担当者名・資格・開始/終了時刻・<strong>提供時間（分）・サービス種別コード</strong>・身体介護内容・生活援助内容</div>
+      </div>
+      <button class="btn btn-primary w-full" style="background:#2563eb" onclick="downloadCsv('billing','請求連携')">請求連携CSVをダウンロード</button>
+    </div>
+  </div>
+
+  <!-- 設定 -->
+  <div id="page-settings" class="page">
+    <div class="section-title">設定</div>
+    <div class="card mb-3">
+      <div class="font-bold text-gray-700 mb-2">📋 プラン情報</div>
+      <div id="planInfo" class="text-sm text-gray-600"></div>
+    </div>
+    <div class="card mb-3 bg-blue-50 border border-blue-200">
+      <div class="font-bold text-blue-800 mb-1">お問い合わせ</div>
+      <a href="mailto:kenji.kys@gmail.com" class="btn btn-primary mt-2 text-sm">メールで問い合わせる</a>
+    </div>
+  </div>
+
+  <!-- ナビ -->
+  <nav class="bottom-nav">
+    <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      ダッシュボード
+    </div>
+    <div class="nav-item" onclick="showPage('schedule')" id="nav-schedule">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+      スケジュール
+    </div>
+    <div class="nav-item" onclick="showPage('messages')" id="nav-messages">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+      <span class="relative">連絡<span id="msgBadge" class="badge absolute -top-2 -right-3 hidden">0</span></span>
+    </div>
+    <div class="nav-item" onclick="showPage('clients')" id="nav-clients">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      利用者
+    </div>
+    <div class="nav-item" onclick="showPage('menu')" id="nav-menu">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      メニュー
+    </div>
+  </nav>
+</div>
+
+<!-- 利用者モーダル -->
+<div id="clientModal" class="modal-overlay" onclick="closeModal('clientModal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="font-bold text-lg mb-4" id="clientModalTitle">利用者を追加</div>
+    <input type="hidden" id="editClientId">
+    <div class="grid grid-cols-2 gap-3">
+      <div class="col-span-2"><label>氏名</label><input id="cName" type="text" placeholder="山田 花子"></div>
+      <div class="col-span-2"><label>ふりがな</label><input id="cKana" type="text" placeholder="やまだ はなこ"></div>
+      <div><label>性別</label><select id="cGender"><option value="">--</option><option value="female">女性</option><option value="male">男性</option></select></div>
+      <div><label>生年月日</label><input id="cBirth" type="date"></div>
+      <div><label>要介護度</label><select id="cCare"><option value="1">要介護1</option><option value="2">要介護2</option><option value="3">要介護3</option><option value="4">要介護4</option><option value="5">要介護5</option></select></div>
+      <div><label>電話番号</label><input id="cPhone" type="tel" placeholder="090-0000-0000"></div>
+      <div class="col-span-2"><label>住所</label><input id="cAddress" type="text" placeholder="〇〇市〇〇町1-2-3"></div>
+      <div><label>家族名</label><input id="cFamilyName" type="text"></div>
+      <div><label>続柄</label><input id="cFamilyRel" type="text" placeholder="長男"></div>
+      <div class="col-span-2"><label>家族連絡先</label><input id="cFamilyPhone" type="tel"></div>
+      <div class="col-span-2"><label>担当ケアマネ</label><input id="cCareManager" type="text"></div>
+      <div class="col-span-2"><label>ケアマネ連絡先</label><input id="cCMPhone" type="tel"></div>
+      <div class="col-span-2"><label>アレルギー・禁忌</label><input id="cAllergies" type="text"></div>
+      <div class="col-span-2"><label>特記事項</label><textarea id="cNotes" rows="2"></textarea></div>
+    </div>
+    <button class="btn btn-primary w-full mt-4" onclick="submitClient()">保存する</button>
+    <button class="btn btn-red w-full mt-2 hidden" id="deleteClientBtn" onclick="deleteClient()">サービス終了処理</button>
+  </div>
+</div>
+
+<!-- ヘルパーモーダル -->
+<div id="helperModal" class="modal-overlay" onclick="closeModal('helperModal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="font-bold text-lg mb-4" id="helperModalTitle">ヘルパーを追加</div>
+    <input type="hidden" id="editHelperId">
+    <div class="grid grid-cols-2 gap-3">
+      <div class="col-span-2"><label>氏名</label><input id="hName" type="text"></div>
+      <div class="col-span-2"><label>ふりがな</label><input id="hKana" type="text"></div>
+      <div><label>電話番号</label><input id="hPhone" type="tel"></div>
+      <div>
+        <label>雇用形態</label>
+        <select id="hEmployment"><option value="full">常勤</option><option value="part">非常勤</option><option value="temp">登録</option></select>
+      </div>
+      <div>
+        <label>資格</label>
+        <select id="hQual"><option value="care3">介護福祉士</option><option value="care2">実務者研修</option><option value="helper2">初任者研修</option><option value="none">無資格</option></select>
+      </div>
+      <div><label>担当エリア</label><input id="hArea" type="text" placeholder="〇〇区、△△町"></div>
+      <div class="col-span-2"><label>備考</label><textarea id="hNotes" rows="2"></textarea></div>
+    </div>
+    <button class="btn btn-primary w-full mt-4" onclick="submitHelper()">保存する</button>
+    <button class="btn btn-red w-full mt-2 hidden" id="deleteHelperBtn" onclick="deleteHelper()">削除する</button>
+  </div>
+</div>
+
+<!-- ヒヤリハットモーダル -->
+<div id="incidentModal" class="modal-overlay" onclick="closeModal('incidentModal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="font-bold text-lg mb-4">ヒヤリハット・事故記録</div>
+    <div class="grid grid-cols-2 gap-3 mb-3">
+      <div><label>発生日</label><input id="incDate" type="date"></div>
+      <div><label>発生時刻</label><input id="incTime" type="time"></div>
+      <div class="col-span-2"><label>対象利用者</label><select id="incClient"><option value="">-- 特定なし --</option></select></div>
+      <div class="col-span-2"><label>担当ヘルパー名</label><input id="incHelper" type="text"></div>
+      <div>
+        <label>種類</label>
+        <select id="incCategory">
+          <option value="fall">転倒・転落</option><option value="medication">服薬ミス</option>
+          <option value="choking">誤嚥・窒息</option><option value="complaint">利用者・家族苦情</option>
+          <option value="other">その他</option>
+        </select>
+      </div>
+      <div>
+        <label>レベル</label>
+        <select id="incLevel"><option value="hiyari">ヒヤリハット</option><option value="1">事故Lv1</option><option value="2">事故Lv2</option></select>
+      </div>
+    </div>
+    <div class="mb-2"><label>状況・詳細</label><textarea id="incDesc" rows="3" placeholder="いつ・どこで・何が起きたか"></textarea></div>
+    <div class="mb-2"><label>対応内容</label><textarea id="incAction" rows="2"></textarea></div>
+    <div class="mb-3"><label>今後の対策</label><textarea id="incFollowup" rows="2"></textarea></div>
+    <button class="btn btn-primary w-full" onclick="submitIncident()">記録する</button>
+  </div>
+</div>
+
+<!-- チェックイン/アウトモーダル -->
+<div id="checkinModal" class="modal-overlay" onclick="closeModal('checkinModal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div id="checkinModalContent"></div>
+  </div>
+</div>
+
+<script>
+const API = '/houmon/api';
+let token = localStorage.getItem('houmon_token') || '';
+let officeName = localStorage.getItem('houmon_office') || '';
+let clients = [], helpers = [], msgPriority = 'normal';
+let currentVisitPlan = null;
+
+async function api(method, path, body) {
+  const opts = {method, headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}};
+  if(body) opts.body = JSON.stringify(body);
+  const r = await fetch(API+path, opts);
+  if(r.status===401){doLogout();return null;}
+  if(!r.ok) throw await r.json().catch(()=>({detail:'error'}));
+  return r.json();
+}
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name)?.classList.add('active');
+  document.getElementById('nav-'+name)?.classList.add('active');
+  if(name==='dashboard') loadDashboard();
+  if(name==='schedule') loadSchedule();
+  if(name==='clients') loadClients();
+  if(name==='messages') loadMessages();
+  if(name==='incidents') loadIncidents();
+  if(name==='helper-manage') loadHelpers();
+  if(name==='export') initExport();
+  if(name==='plan-add') initPlanAdd();
+  if(name==='settings') loadSettings();
+}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+// ── auth ──
+function switchAuthTab(tab) {
+  document.getElementById('loginForm').classList.toggle('hidden',tab!=='login');
+  document.getElementById('registerForm').classList.toggle('hidden',tab!=='register');
+  document.querySelectorAll('#authTab .tab-item').forEach((el,i)=>{
+    el.classList.toggle('active',(tab==='login'&&i===0)||(tab==='register'&&i===1));
+  });
+}
+async function doLogin() {
+  const u=document.getElementById('loginUser').value.trim();
+  const p=document.getElementById('loginPass').value.trim();
+  if(!u||!p) return;
+  try {
+    const r=await fetch(API+'/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+    const d=await r.json();
+    if(!r.ok) throw d;
+    token=d.token; officeName=d.office_name;
+    localStorage.setItem('houmon_token',token); localStorage.setItem('houmon_office',officeName);
+    startApp();
+  } catch(e){showLoginError('ログインに失敗しました');}
+}
+async function doRegister() {
+  const o=document.getElementById('regOffice').value.trim();
+  const u=document.getElementById('regUser').value.trim();
+  const e=document.getElementById('regEmail').value.trim();
+  const p=document.getElementById('regPass').value.trim();
+  if(!o||!u||!e||!p){showLoginError('全て入力してください');return;}
+  try {
+    const r=await fetch(API+'/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,office_name:o,email:e,password:p})});
+    const d=await r.json();
+    if(!r.ok) throw d;
+    token=d.token; officeName=d.office_name;
+    localStorage.setItem('houmon_token',token); localStorage.setItem('houmon_office',officeName);
+    startApp();
+  } catch(e){showLoginError('登録に失敗しました');}
+}
+function showLoginError(msg){const el=document.getElementById('loginError');el.textContent=msg;el.classList.remove('hidden');setTimeout(()=>el.classList.add('hidden'),4000);}
+function doLogout(){token='';localStorage.removeItem('houmon_token');localStorage.removeItem('houmon_office');document.getElementById('app').classList.add('hidden');document.getElementById('loginScreen').classList.remove('hidden');}
+
+async function startApp() {
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('topOfficeName').textContent=officeName;
+  const now=new Date();
+  document.getElementById('topDate').textContent=now.toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
+  await loadClientsData();
+  await loadHelpersData();
+  loadDashboard();
+}
+
+async function loadClientsData() {
+  try{clients=await api('GET','/clients')||[];}catch(e){clients=[];}
+  ['planClient','incClient','msgClient'].forEach(sid=>{
+    const sel=document.getElementById(sid); if(!sel) return;
+    const first=sel.options[0]; sel.innerHTML=''; sel.appendChild(first);
+    clients.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.name;sel.appendChild(o);});
+  });
+}
+async function loadHelpersData() {
+  try{helpers=await api('GET','/helpers')||[];}catch(e){helpers=[];}
+  ['planHelper','msgSenderName'].forEach(sid=>{
+    const sel=document.getElementById(sid); if(!sel) return;
+    sel.innerHTML='<option value="">-- 選択 --</option>';
+    helpers.forEach(h=>{const o=document.createElement('option');o.value=sid==='planHelper'?h.id:h.name;o.textContent=h.name;sel.appendChild(o);});
+  });
+}
+
+// ── dashboard ──
+async function loadDashboard() {
+  try {
+    const d=await api('GET','/dashboard');
+    if(!d) return;
+    document.getElementById('kpiPlans').textContent=d.today_plans;
+    document.getElementById('kpiDone').textContent=d.completed;
+    document.getElementById('kpiIn').textContent=d.checked_in;
+    document.getElementById('kpiMsg').textContent=d.unread_msg;
+    const mb=document.getElementById('msgBadge');
+    if(d.unread_msg>0){mb.textContent=d.unread_msg;mb.classList.remove('hidden');}else mb.classList.add('hidden');
+    const tvEl=document.getElementById('todayVisits');
+    if(!d.today_visits.length){tvEl.innerHTML='<p class="text-gray-400 text-sm text-center py-3">本日の訪問予定はありません</p>';return;}
+    tvEl.innerHTML=d.today_visits.map(v=>renderVisitCard(v)).join('');
+    const msgEl=document.getElementById('dashMessages');
+    if(!d.recent_msg.length){msgEl.innerHTML='<p class="text-gray-400 text-sm text-center py-2">連絡なし</p>';return;}
+    msgEl.innerHTML=d.recent_msg.map(m=>renderMessage(m)).join('');
+  }catch(e){}
+}
+
+function renderVisitCard(v) {
+  const checked_in = v.checkin_time && !v.checkout_time;
+  const done = v.checkout_time;
+  const statusClass = done?'status-done':checked_in?'status-in':'status-planned';
+  const statusLabel = done?'完了':checked_in?'訪問中':'予定';
+  const statusBg = done?'tag-blue':checked_in?'tag-green':'tag-gray';
+  const typeLabel={body:'身体介護',life:'生活援助',both:'身体+生活',accompany:'通院等乗降'};
+  return `<div class="visit-card">
+    <div class="flex justify-between items-start mb-2">
+      <div class="flex items-center gap-2">
+        <div class="status-dot ${statusClass}"></div>
+        <span class="font-bold text-base">${v.client_name}</span>
+        <span class="tag ${statusBg} text-xs">${statusLabel}</span>
+      </div>
+      <span class="text-sm text-gray-500">${v.start_time}〜${v.end_time}</span>
+    </div>
+    <div class="text-xs text-gray-500 mb-2">
+      👤 ${v.helper_name||'未割当'} ｜ ${typeLabel[v.service_type]||v.service_type}
+      ${v.address?'｜ 📍'+v.address.slice(0,15):''}
+    </div>
+    ${!done&&!checked_in?`<button class="btn btn-green w-full text-sm py-2" onclick="openCheckin(${JSON.stringify(v).replace(/"/g,'&quot;')})">チェックイン</button>`:''}
+    ${checked_in?`<button class="btn btn-primary w-full text-sm py-2" onclick="openCheckout(${v.record_id},${JSON.stringify(v).replace(/"/g,'&quot;')})">チェックアウト・記録入力</button>`:''}
+    ${done?`<div class="text-xs text-blue-600 mt-1">✓ ${v.checkin_time}〜${v.checkout_time} 完了</div>`:''}
+  </div>`;
+}
+
+function renderMessage(m) {
+  const cls = m.priority==='urgent'?'msg-urgent':m.sender_type==='sasa'?'msg-sasa':'msg-helper';
+  return `<div class="msg-bubble ${cls}">
+    <div class="flex justify-between items-center mb-1">
+      <span class="font-bold text-xs">${m.sender_name} ${m.priority==='urgent'?'🔴緊急':''}</span>
+      <span class="text-xs text-gray-400">${m.created_at?.slice(5,16)||''}</span>
+    </div>
+    ${m.client_name?`<div class="text-xs text-gray-500 mb-1">📌 ${m.client_name}様</div>`:''}
+    <div class="text-sm">${m.content}</div>
+  </div>`;
+}
+
+// ── schedule ──
+async function loadSchedule() {
+  const el=document.getElementById('scheduleList');
+  el.innerHTML='<div class="spinner"></div>';
+  const today=new Date().toISOString().slice(0,10);
+  try {
+    const data=await api('GET',`/visit-plans?date=${today}`)||[];
+    if(!data.length){el.innerHTML='<p class="text-gray-400 text-center py-4">本日の訪問予定はありません</p>';return;}
+    el.innerHTML=data.map(v=>renderVisitCard(v)).join('');
+  }catch(e){el.innerHTML='<p class="text-red-500 text-sm text-center">読み込みエラー</p>';}
+}
+
+function openCheckin(plan) {
+  currentVisitPlan=plan;
+  const now=new Date();
+  const nowStr=now.toTimeString().slice(0,5);
+  document.getElementById('checkinModalContent').innerHTML=`
+    <div class="font-bold text-lg mb-2">チェックイン</div>
+    <div class="card bg-blue-50 border border-blue-200 mb-4">
+      <div class="font-bold text-blue-800">${plan.client_name} 様</div>
+      <div class="text-sm text-blue-600">${plan.start_time}〜${plan.end_time} ｜ ${plan.helper_name||'担当未設定'}</div>
+      ${plan.address?`<div class="text-xs text-gray-500 mt-1">📍 ${plan.address}</div>`:''}
+    </div>
+    <div class="mb-4"><label>開始時刻</label><input type="time" id="ciTime" value="${nowStr}"></div>
+    <div class="mb-3"><label>担当ヘルパー</label><select id="ciHelper">
+      <option value="">-- 選択 --</option>
+      ${helpers.map(h=>`<option value="${h.id}" ${plan.helper_id==h.id?'selected':''}>${h.name}</option>`).join('')}
+    </select></div>
+    <button class="btn btn-green checkin-btn w-full" onclick="doCheckin()">📍 チェックイン（訪問開始）</button>`;
+  openModal('checkinModal');
+}
+
+async function doCheckin() {
+  const p=currentVisitPlan;
+  const ciTime=document.getElementById('ciTime').value;
+  const hid=parseInt(document.getElementById('ciHelper').value)||null;
+  const today=new Date().toISOString().slice(0,10);
+  try {
+    await api('POST','/checkin',{visit_plan_id:p.id,client_id:p.client_id,helper_id:hid,visit_date:today,checkin_time:ciTime});
+    closeModal('checkinModal');
+    loadDashboard();
+    if(document.getElementById('page-schedule').classList.contains('active')) loadSchedule();
+    alert(`${p.client_name}様 チェックイン完了（${ciTime}）`);
+  }catch(e){alert(e.detail==='already_checked_in'?'既にチェックイン済みです':'エラーが発生しました');}
+}
+
+function openCheckout(rid, plan) {
+  currentVisitPlan={...plan, record_id:rid};
+  const now=new Date().toTimeString().slice(0,5);
+  document.getElementById('checkinModalContent').innerHTML=`
+    <div class="font-bold text-lg mb-2">チェックアウト・記録入力</div>
+    <div class="card bg-green-50 border border-green-200 mb-4">
+      <div class="font-bold text-green-800">${plan.client_name} 様</div>
+      <div class="text-sm text-green-600">チェックイン: ${plan.checkin_time}</div>
+    </div>
+    <div class="mb-3"><label>終了時刻</label><input type="time" id="coTime" value="${now}"></div>
+    <div class="mb-3">
+      <label class="mb-2">体調</label>
+      <div class="flex gap-2" id="condBtns">
+        <button class="btn flex-1 text-xs" data-val="good" onclick="selectCond('good',this)" style="background:#dcfce7;color:#166534">良好</button>
+        <button class="btn flex-1 text-xs" data-val="normal" onclick="selectCond('normal',this)" style="background:#dbeafe;color:#1d4ed8;border:2px solid #2563eb">普通</button>
+        <button class="btn flex-1 text-xs" data-val="poor" onclick="selectCond('poor',this)" style="background:#fef3c7;color:#92400e">不調</button>
+        <button class="btn flex-1 text-xs" data-val="bad" onclick="selectCond('bad',this)" style="background:#fee2e2;color:#991b1b">要注意</button>
+      </div>
+    </div>
+    <div class="mb-3">
+      <label class="mb-2">提供した身体介護サービス</label>
+      ${['入浴介助','清拭','排泄介助','食事介助','口腔ケア','移動・移乗介助','体位変換'].map(s=>`
+        <label class="service-check"><input type="checkbox" class="body-care" value="${s}">${s}</label>`).join('')}
+    </div>
+    <div class="mb-3">
+      <label class="mb-2">提供した生活援助サービス</label>
+      ${['掃除・整理整頓','洗濯・乾燥・収納','買い物代行','調理・配膳','薬の受け取り'].map(s=>`
+        <label class="service-check"><input type="checkbox" class="life-support" value="${s}">${s}</label>`).join('')}
+    </div>
+    <div class="mb-3"><label>ヘルパーからの特記事項</label><textarea id="coNotes" rows="3" placeholder="気になった点、申し送り事項など"></textarea></div>
+    <button class="btn btn-primary checkin-btn w-full" onclick="doCheckout()">✅ チェックアウト（訪問完了）</button>`;
+  openModal('checkinModal');
+}
+
+let selectedCond='normal';
+function selectCond(val,btn){
+  selectedCond=val;
+  document.getElementById('condBtns').querySelectorAll('.btn').forEach(b=>{
+    b.style.border='';b.style.opacity='0.6';
+  });
+  btn.style.border='2px solid #374151';btn.style.opacity='1';
+}
+
+async function doCheckout() {
+  const rid=currentVisitPlan.record_id;
+  const coTime=document.getElementById('coTime').value;
+  const bodyCare=[...document.querySelectorAll('.body-care:checked')].map(c=>c.value).join('、');
+  const lifeSupport=[...document.querySelectorAll('.life-support:checked')].map(c=>c.value).join('、');
+  const notes=document.getElementById('coNotes').value.trim();
+  try {
+    await api('PUT',`/checkout/${rid}`,{checkout_time:coTime,body_care:bodyCare,life_support:lifeSupport,client_condition:selectedCond,helper_notes:notes,notes:''});
+    closeModal('checkinModal');
+    loadDashboard();
+    if(document.getElementById('page-schedule').classList.contains('active')) loadSchedule();
+    alert(`${currentVisitPlan.client_name}様 チェックアウト完了（${coTime}）`);
+  }catch(e){alert('エラーが発生しました');}
+}
+
+// ── plan add ──
+function initPlanAdd() {
+  const now=new Date();
+  document.getElementById('planDate').value=now.toISOString().slice(0,10);
+  document.getElementById('planStart').value='09:00';
+  document.getElementById('planEnd').value='10:00';
+}
+async function submitPlan() {
+  const cid=document.getElementById('planClient').value;
+  const hid=document.getElementById('planHelper').value;
+  if(!cid){alert('利用者を選択してください');return;}
+  const body={client_id:parseInt(cid),helper_id:hid?parseInt(hid):null,
+    plan_date:document.getElementById('planDate').value,
+    start_time:document.getElementById('planStart').value,
+    end_time:document.getElementById('planEnd').value,
+    service_type:document.getElementById('planType').value,
+    notes:document.getElementById('planNotes').value};
+  await api('POST','/visit-plans',body);
+  showPage('schedule');
+}
+
+// ── clients ──
+async function loadClients() {
+  const el=document.getElementById('clientList');
+  el.innerHTML='<div class="spinner"></div>';
+  await loadClientsData();
+  renderClients(clients);
+}
+function renderClients(list) {
+  const el=document.getElementById('clientList');
+  if(!list.length){el.innerHTML='<p class="text-gray-400 text-center py-4">利用者がいません</p>';return;}
+  const colors=['bg-blue-100 text-blue-700','bg-teal-100 text-teal-700','bg-purple-100 text-purple-700','bg-amber-100 text-amber-700'];
+  el.innerHTML=list.map(c=>`
+    <div class="helper-card" onclick="openClientModal(clients.find(x=>x.id===${c.id}))">
+      <div class="avatar ${colors[c.id%4]}">${c.name[0]}</div>
+      <div class="flex-1">
+        <div class="font-bold text-gray-800">${c.name}</div>
+        <div class="flex gap-1 mt-1 flex-wrap">
+          <span class="tag tag-blue">要介護${c.care_level}</span>
+          ${c.address?`<span class="tag tag-gray text-xs">${c.address.slice(0,12)}</span>`:''}
+        </div>
+      </div>
+      <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+    </div>`).join('');
+}
+function filterClients(q){renderClients(clients.filter(c=>c.name.includes(q)||(c.address||'').includes(q)));}
+function openClientModal(c=null) {
+  document.getElementById('clientModalTitle').textContent=c?'利用者情報を編集':'利用者を追加';
+  document.getElementById('editClientId').value=c?c.id:'';
+  document.getElementById('deleteClientBtn').classList.toggle('hidden',!c);
+  const fields={cName:'name',cKana:'kana',cBirth:'birthdate',cPhone:'phone',cAddress:'address',cFamilyName:'family_name',cFamilyPhone:'family_phone',cFamilyRel:'family_relation',cCareManager:'care_manager',cCMPhone:'care_manager_phone',cAllergies:'allergies',cNotes:'notes'};
+  Object.entries(fields).forEach(([id,key])=>document.getElementById(id).value=c?(c[key]||''):'');
+  if(c){document.getElementById('cGender').value=c.gender||'';document.getElementById('cCare').value=c.care_level||1;}
+  else{document.getElementById('cGender').value='';document.getElementById('cCare').value=1;}
+  openModal('clientModal');
+}
+async function submitClient() {
+  const cid=document.getElementById('editClientId').value;
+  const body={name:document.getElementById('cName').value.trim(),kana:document.getElementById('cKana').value.trim(),gender:document.getElementById('cGender').value,birthdate:document.getElementById('cBirth').value,care_level:parseInt(document.getElementById('cCare').value),address:document.getElementById('cAddress').value.trim(),phone:document.getElementById('cPhone').value.trim(),family_name:document.getElementById('cFamilyName').value.trim(),family_phone:document.getElementById('cFamilyPhone').value.trim(),family_relation:document.getElementById('cFamilyRel').value.trim(),care_manager:document.getElementById('cCareManager').value.trim(),care_manager_phone:document.getElementById('cCMPhone').value.trim(),allergies:document.getElementById('cAllergies').value.trim(),notes:document.getElementById('cNotes').value.trim()};
+  if(!body.name){alert('氏名を入力してください');return;}
+  if(cid) await api('PUT',`/clients/${cid}`,body); else await api('POST','/clients',body);
+  closeModal('clientModal'); await loadClientsData(); renderClients(clients);
+}
+async function deleteClient(){if(!confirm('サービス終了処理を行いますか？'))return;const cid=document.getElementById('editClientId').value;await api('DELETE',`/clients/${cid}`);closeModal('clientModal');await loadClientsData();renderClients(clients);}
+
+// ── helpers ──
+async function loadHelpers() {
+  await loadHelpersData();
+  const el=document.getElementById('helperList');
+  if(!helpers.length){el.innerHTML='<p class="text-gray-400 text-center py-4">ヘルパーが登録されていません</p>';return;}
+  const qualLabel={care3:'介護福祉士',care2:'実務者研修',helper2:'初任者研修',none:'無資格'};
+  const empLabel={full:'常勤',part:'非常勤',temp:'登録'};
+  el.innerHTML=helpers.map(h=>`
+    <div class="helper-card" onclick="openHelperModal(helpers.find(x=>x.id===${h.id}))">
+      <div class="avatar bg-green-100 text-green-700">${h.name[0]}</div>
+      <div class="flex-1">
+        <div class="font-bold">${h.name}</div>
+        <div class="flex gap-1 mt-1 flex-wrap">
+          <span class="tag tag-green">${qualLabel[h.qualification]||h.qualification}</span>
+          <span class="tag tag-gray">${empLabel[h.employment_type]||h.employment_type}</span>
+          ${h.area?`<span class="tag tag-blue text-xs">${h.area}</span>`:''}
+        </div>
+      </div>
+      <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+    </div>`).join('');
+}
+function openHelperModal(h=null){
+  document.getElementById('helperModalTitle').textContent=h?'ヘルパー情報を編集':'ヘルパーを追加';
+  document.getElementById('editHelperId').value=h?h.id:'';
+  document.getElementById('deleteHelperBtn').classList.toggle('hidden',!h);
+  ['hName','hKana','hPhone','hArea','hNotes'].forEach(id=>{const map={hName:'name',hKana:'kana',hPhone:'phone',hArea:'area',hNotes:'notes'};document.getElementById(id).value=h?(h[map[id]]||''):'';});
+  if(h){document.getElementById('hEmployment').value=h.employment_type||'part';document.getElementById('hQual').value=h.qualification||'helper2';}
+  openModal('helperModal');
+}
+async function submitHelper(){const hid=document.getElementById('editHelperId').value;const body={name:document.getElementById('hName').value.trim(),kana:document.getElementById('hKana').value.trim(),phone:document.getElementById('hPhone').value.trim(),employment_type:document.getElementById('hEmployment').value,qualification:document.getElementById('hQual').value,area:document.getElementById('hArea').value.trim(),notes:document.getElementById('hNotes').value.trim()};if(!body.name){alert('氏名を入力してください');return;}if(hid)await api('PUT',`/helpers/${hid}`,body);else await api('POST','/helpers',body);closeModal('helperModal');loadHelpers();}
+async function deleteHelper(){if(!confirm('削除しますか？'))return;const hid=document.getElementById('editHelperId').value;await api('DELETE',`/helpers/${hid}`);closeModal('helperModal');loadHelpers();}
+
+// ── messages ──
+function selectMsgPriority(val,btn){msgPriority=val;document.querySelectorAll('#page-messages .card .btn[data-priority]').forEach(b=>{b.style.background='';b.style.color='';b.style.border='';});btn.style.border='2px solid #374151';}
+async function loadMessages(){const el=document.getElementById('messageList');el.innerHTML='<div class="spinner"></div>';const data=await api('GET','/messages')||[];el.innerHTML=data.length?data.map(m=>renderMessage(m)).join(''):'<p class="text-gray-400 text-center py-4">連絡なし</p>';document.getElementById('msgBadge').classList.add('hidden');}
+async function submitMessage(){const content=document.getElementById('msgContent').value.trim();const stype=document.getElementById('msgSenderType').value;const sname=document.getElementById('msgSenderName').value;if(!content){alert('内容を入力してください');return;}await api('POST','/messages',{sender_type:stype,sender_name:sname,client_id:parseInt(document.getElementById('msgClient').value)||null,content,priority:msgPriority});document.getElementById('msgContent').value='';loadMessages();loadDashboard();}
+async function readAllMessages(){await api('PUT','/messages/read-all');loadMessages();loadDashboard();}
+
+// ── incidents ──
+function openIncidentModal(){const now=new Date();document.getElementById('incDate').value=now.toISOString().slice(0,10);document.getElementById('incTime').value=now.toTimeString().slice(0,5);openModal('incidentModal');}
+async function loadIncidents(){const el=document.getElementById('incidentList');el.innerHTML='<div class="spinner"></div>';const data=await api('GET','/incidents')||[];const catLabel={fall:'転倒・転落',medication:'服薬ミス',choking:'誤嚥・窒息',complaint:'苦情',other:'その他'};const levColor={hiyari:'tag-amber','1':'tag-amber','2':'tag-red'};const levLabel={hiyari:'ヒヤリ','1':'事故Lv1','2':'事故Lv2'};el.innerHTML=data.length?data.map(i=>`<div class="card mb-2"><div class="flex justify-between mb-1"><div><span class="tag ${levColor[i.level]} mr-1">${levLabel[i.level]}</span><span class="font-bold text-sm">${catLabel[i.category]||i.category}</span></div><span class="text-xs text-gray-400">${i.incident_date} ${i.incident_time}</span></div>${i.client_name?`<div class="text-xs text-gray-500 mb-1">対象:${i.client_name}</div>`:''}<div class="text-sm text-gray-700">${i.description}</div>${i.action_taken?`<div class="text-xs text-gray-500 mt-1">対応:${i.action_taken}</div>`:''}</div>`).join(''):'<p class="text-gray-400 text-center py-4">記録なし</p>';}
+async function submitIncident(){const body={client_id:parseInt(document.getElementById('incClient').value)||null,incident_date:document.getElementById('incDate').value,incident_time:document.getElementById('incTime').value,helper_name:document.getElementById('incHelper').value.trim(),category:document.getElementById('incCategory').value,level:document.getElementById('incLevel').value,description:document.getElementById('incDesc').value.trim(),action_taken:document.getElementById('incAction').value.trim(),followup:document.getElementById('incFollowup').value.trim()};if(!body.description){alert('状況を入力してください');return;}await api('POST','/incidents',body);closeModal('incidentModal');loadIncidents();}
+
+// ── AI summary ──
+async function generateAiSummary(){const btn=document.getElementById('aiSummaryBtn');btn.textContent='⏳ 生成中...';btn.disabled=true;try{const d=await api('POST','/ai/daily-summary');if(!d)throw new Error();document.getElementById('aiSummaryText').textContent=d.summary;document.getElementById('aiSummaryBanner').classList.remove('hidden');}catch(e){alert(e?.detail||'AI生成に失敗しました。本日の訪問記録（チェックアウト済み）が必要です。');}finally{btn.textContent='✨ AI日報生成';btn.disabled=false;}}
+
+// ── export ──
+function initExport(){const now=new Date();const sel=document.getElementById('exportYear');if(!sel.options.length){for(let y=now.getFullYear();y>=now.getFullYear()-2;y--){const o=document.createElement('option');o.value=y;o.textContent=y+'年';sel.appendChild(o);}}sel.value=now.getFullYear();document.getElementById('exportMonth').value=now.getMonth()+1;}
+async function downloadCsv(type='visit-records', label='訪問記録'){const y=document.getElementById('exportYear').value;const m=document.getElementById('exportMonth').value;const r=await fetch(`${API}/export/${type}?year=${y}&month=${m}`,{headers:{'Authorization':'Bearer '+token}});if(!r.ok){alert('データがありません');return;}const blob=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${label}_${y}年${String(m).padStart(2,'0')}月.csv`;a.click();}
+
+// ── settings ──
+async function loadSettings(){const me=await api('GET','/me');if(me){const planLabel={trial:'トライアル',standard:'スタンダード'};document.getElementById('planBadge').textContent=planLabel[me.plan]||me.plan;document.getElementById('planInfo').innerHTML=`<div>プラン: <strong>${planLabel[me.plan]||me.plan}</strong></div><div>ステータス: <strong>${me.subscription_status==='trial'?'無料トライアル中':'有効'}</strong></div>${me.trial_end?`<div class="text-gray-400 text-xs mt-1">トライアル終了: ${me.trial_end?.slice(0,10)}</div>`:''}`; }}
+
+if(token) startApp();
+else document.getElementById('loginScreen').classList.remove('hidden');
+</script>
+</body>
+</html>

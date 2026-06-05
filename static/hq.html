@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>訪問介護マネージャー 本部ポータル</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root{--blue:#2563eb;--blue-dark:#1d4ed8;--blue-light:#dbeafe;--green:#16a34a;--amber:#d97706;--red:#dc2626}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Hiragino Sans','Yu Gothic UI','Meiryo',sans-serif;background:#eff6ff;min-height:100vh}
+.btn{display:inline-flex;align-items:center;justify-content:center;border-radius:10px;font-weight:700;cursor:pointer;border:none;padding:9px 18px;font-size:14px;transition:all .15s;white-space:nowrap;gap:6px}
+.btn-primary{background:var(--blue);color:#fff;box-shadow:0 2px 8px rgba(37,99,235,.3)}.btn-primary:hover{background:var(--blue-dark)}
+.btn-outline{background:#fff;color:var(--blue);border:2px solid var(--blue)}.btn-outline:hover{background:var(--blue-light)}
+.btn-amber{background:#fef3c7;color:#92400e}
+.btn-sm{padding:6px 12px;font-size:13px;border-radius:8px}
+.card{background:#fff;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.07);padding:18px;margin-bottom:14px}
+input,select,textarea{width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 12px;font-size:14px;outline:none;box-sizing:border-box}
+input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+label{font-size:12px;font-weight:600;color:#374151;margin-bottom:3px;display:block}
+.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:16px;font-size:11px;font-weight:700}
+.hidden{display:none!important}
+.layout{display:flex;min-height:calc(100vh - 56px)}
+.sidebar{width:220px;flex-shrink:0;background:#fff;border-right:1px solid #e5e7eb;padding:16px 0}
+.sb-item{display:flex;align-items:center;gap:10px;padding:11px 20px;font-size:14px;font-weight:600;color:#6b7280;cursor:pointer;border-radius:0 24px 24px 0;margin-right:12px;transition:all .15s}
+.sb-item:hover{background:var(--blue-light);color:var(--blue)}
+.sb-item.active{background:var(--blue-light);color:var(--blue)}
+.main{flex:1;padding:24px;overflow-x:auto;min-width:0}
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e5e7eb;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+.mn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;font-size:10px;font-weight:600;color:#9ca3af;cursor:pointer;gap:2px}
+.mn-item.active{color:var(--blue)}
+.mn-item svg{width:20px;height:20px}
+.stat-box{text-align:center;padding:12px 8px;border-radius:10px;background:#f8fafc}
+.stat-num{font-size:22px;font-weight:700}
+.stat-label{font-size:10px;color:#6b7280;margin-top:2px}
+.office-card{border-left:4px solid var(--blue);background:#fff;border-radius:0 12px 12px 0;padding:14px;margin-bottom:10px;box-shadow:0 1px 6px rgba(0,0,0,.07)}
+.filter-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:16px}
+.filter-bar>div{min-width:120px}
+.section-title{font-size:16px;font-weight:700;color:#111827;margin-bottom:14px}
+.visit-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:13px}
+.visit-row:last-child{border-bottom:none}
+.status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dot-done{background:#93c5fd}
+.dot-in{background:#22c55e;animation:pulse 2s infinite}
+.dot-plan{background:#d1d5db}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:8px 10px;border-bottom:2px solid #dbeafe;background:#eff6ff;text-align:left;white-space:nowrap}
+td{padding:7px 10px;border-bottom:1px solid #e5e7eb}
+tr:nth-child(even) td{background:#f8fafc}
+@media(max-width:768px){
+  .sidebar{display:none}
+  .mobile-nav{display:flex!important}
+  .main{padding:12px;padding-bottom:72px}
+}
+</style>
+</head>
+<body>
+
+<!-- ログイン -->
+<div id="loginScreen" class="min-h-screen flex flex-col items-center justify-center p-6" style="background:linear-gradient(135deg,#1d4ed8,#0d9488)">
+  <div class="w-full" style="max-width:380px">
+    <div class="text-center mb-8">
+      <div style="font-size:52px;margin-bottom:8px">🏢</div>
+      <h1 style="font-size:22px;font-weight:700;color:#fff;margin:0">訪問介護 本部管理ポータル</h1>
+      <p style="color:#bfdbfe;font-size:13px;margin-top:6px">複数事業所を一元管理</p>
+    </div>
+    <div class="card" style="border-radius:18px">
+      <div style="margin-bottom:14px"><label>ユーザー名</label><input id="hqUser" type="text" placeholder="本部ID" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div style="margin-bottom:18px"><label>パスワード</label><input id="hqPass" type="password" placeholder="パスワード" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <button class="btn btn-primary" style="width:100%;min-height:46px;font-size:16px" onclick="doLogin()">ログイン</button>
+      <p id="loginErr" class="hidden" style="color:#dc2626;font-size:13px;text-align:center;margin-top:10px"></p>
+    </div>
+  </div>
+</div>
+
+<!-- メインアプリ -->
+<div id="app" class="hidden">
+  <!-- ヘッダー -->
+  <div style="background:var(--blue);color:#fff;padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200">
+    <div style="display:flex;align-items:center;gap:12px">
+      <span style="font-size:20px">🏢</span>
+      <div>
+        <div style="font-weight:700;font-size:15px" id="orgName">本部名</div>
+        <div style="font-size:11px;opacity:.8" id="headerDate"></div>
+      </div>
+    </div>
+    <button onclick="doLogout()" style="background:rgba(255,255,255,.15);border:none;color:#fff;padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer">ログアウト</button>
+  </div>
+
+  <div class="layout">
+    <!-- サイドバー -->
+    <div class="sidebar">
+      <div class="sb-item active" id="sb-overview" onclick="showPane('overview')"><span>📊</span>事業所ダッシュボード</div>
+      <div class="sb-item" id="sb-visits" onclick="showPane('visits')"><span>🚗</span>今日の訪問状況</div>
+      <div class="sb-item" id="sb-incidents" onclick="showPane('incidents')"><span>⚠️</span>ヒヤリハット</div>
+      <div class="sb-item" id="sb-settings" onclick="showPane('settings')"><span>⚙️</span>設定</div>
+    </div>
+
+    <div class="main">
+
+      <!-- ダッシュボード -->
+      <div id="pane-overview">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div class="section-title" style="margin:0">事業所別ダッシュボード</div>
+          <div style="font-size:12px;color:#9ca3af" id="dashDate"></div>
+        </div>
+        <div id="officeList"><div style="text-align:center;color:#9ca3af;padding:40px">読み込み中...</div></div>
+      </div>
+
+      <!-- 今日の訪問状況 -->
+      <div id="pane-visits" class="hidden">
+        <div class="section-title">今日の訪問状況（全事業所）</div>
+        <div class="filter-bar">
+          <div style="flex:2;min-width:140px"><label>事業所</label><select id="visitOfficeFilter"><option value="">全事業所</option></select></div>
+          <button class="btn btn-primary btn-sm" onclick="loadTodayVisits()">更新</button>
+        </div>
+        <div id="todayVisitList"></div>
+      </div>
+
+      <!-- ヒヤリハット -->
+      <div id="pane-incidents" class="hidden">
+        <div class="section-title">ヒヤリハット・事故一覧</div>
+        <div class="filter-bar">
+          <div style="flex:2;min-width:140px"><label>事業所</label><select id="incOfficeFilter"><option value="">全事業所</option></select></div>
+          <div><label>年</label><select id="incYear" style="width:90px"></select></div>
+          <div><label>月</label><select id="incMonth" style="width:75px">
+            <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option><option value="4">4月</option><option value="5">5月</option><option value="6">6月</option>
+            <option value="7">7月</option><option value="8">8月</option><option value="9">9月</option><option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
+          </select></div>
+          <button class="btn btn-primary btn-sm" onclick="loadIncidents()">表示</button>
+          <button class="btn btn-outline btn-sm" onclick="exportIncidents()">📥 CSV</button>
+        </div>
+        <div id="hqIncidentList"></div>
+      </div>
+
+      <!-- 設定 -->
+      <div id="pane-settings" class="hidden">
+        <div class="section-title">設定</div>
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:14px">📧 月次レポートメール設定</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+            <div style="grid-column:span 2"><label>SMTPサーバー</label><input id="smtpHost" type="text" placeholder="smtp.gmail.com"></div>
+            <div><label>ポート番号</label><input id="smtpPort" type="number" value="587"></div>
+            <div style="grid-column:span 2"><label>メールアドレス</label><input id="smtpUser" type="email"></div>
+            <div style="grid-column:span 2"><label>パスワード</label><input id="smtpPass" type="password"></div>
+          </div>
+          <button class="btn btn-primary" onclick="saveSmtp()">設定を保存</button>
+        </div>
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:8px">📨 今すぐ月次レポートを送信</div>
+          <p style="font-size:13px;color:#6b7280;margin-bottom:12px">全事業所の訪問件数・ヒヤリハット件数をメールで送信します。</p>
+          <button class="btn btn-amber" onclick="sendReport()">今すぐ送信する</button>
+          <p id="sendStatus" style="font-size:13px;margin-top:8px"></p>
+        </div>
+        <div class="card" style="background:#f9fafb">
+          <div style="font-weight:700;margin-bottom:8px">🏥 アクセス可能な事業所</div>
+          <div id="accessList" style="font-size:13px;color:#6b7280"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- モバイルナビ -->
+  <nav class="mobile-nav">
+    <div class="mn-item active" id="mn-overview" onclick="showPane('overview')">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>事業所
+    </div>
+    <div class="mn-item" id="mn-visits" onclick="showPane('visits')">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>訪問状況
+    </div>
+    <div class="mn-item" id="mn-incidents" onclick="showPane('incidents')">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>ヒヤリ
+    </div>
+    <div class="mn-item" id="mn-settings" onclick="showPane('settings')">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>設定
+    </div>
+  </nav>
+</div>
+
+<script>
+const API='/houmon/api';
+let hqToken=localStorage.getItem('houmon_hq_token')||'';
+let hqOffices=[];
+
+async function hqApi(method,path,body){
+  const opts={method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+hqToken}};
+  if(body) opts.body=JSON.stringify(body);
+  const r=await fetch(API+path,opts);
+  if(r.status===401){doLogout();return null;}
+  if(!r.ok) throw await r.json().catch(()=>({detail:'error'}));
+  return r.json();
+}
+
+async function doLogin(){
+  const u=document.getElementById('hqUser').value.trim();
+  const p=document.getElementById('hqPass').value.trim();
+  if(!u||!p) return;
+  try{
+    const r=await fetch(API+'/hq/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+    const d=await r.json(); if(!r.ok) throw d;
+    hqToken=d.token; localStorage.setItem('houmon_hq_token',hqToken);
+    document.getElementById('orgName').textContent=d.org_name;
+    startHq();
+  }catch(e){const el=document.getElementById('loginErr');el.textContent='ログインに失敗しました';el.classList.remove('hidden');setTimeout(()=>el.classList.add('hidden'),3000);}
+}
+function doLogout(){hqToken='';localStorage.removeItem('houmon_hq_token');document.getElementById('app').classList.add('hidden');document.getElementById('loginScreen').classList.remove('hidden');}
+
+async function startHq(){
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('headerDate').textContent=new Date().toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric'});
+  initYears();
+  await loadDashboard();
+  const me=await hqApi('GET','/hq/me');
+  if(me&&me.smtp_host){document.getElementById('smtpHost').value=me.smtp_host||'';document.getElementById('smtpPort').value=me.smtp_port||587;document.getElementById('smtpUser').value=me.smtp_user||'';}
+}
+
+function initYears(){const now=new Date();const sel=document.getElementById('incYear');sel.innerHTML='';for(let y=now.getFullYear();y>=now.getFullYear()-2;y--){const o=document.createElement('option');o.value=y;o.textContent=y+'年';sel.appendChild(o);}sel.value=now.getFullYear();document.getElementById('incMonth').value=now.getMonth()+1;}
+
+async function loadDashboard(){
+  const d=await hqApi('GET','/hq/dashboard');
+  if(!d) return;
+  document.getElementById('dashDate').textContent='集計日: '+d.today;
+  hqOffices=d.offices;
+  const el=document.getElementById('officeList');
+  if(!d.offices.length){el.innerHTML='<p style="text-align:center;color:#9ca3af;padding:40px">事業所が登録されていません</p>';return;}
+  ['visitOfficeFilter','incOfficeFilter'].forEach(sid=>{const sel=document.getElementById(sid);const first=sel.options[0];sel.innerHTML='';sel.appendChild(first);d.offices.forEach(o=>{const opt=document.createElement('option');opt.value=o.office_id;opt.textContent=o.office_name;sel.appendChild(opt);});});
+  el.innerHTML=d.offices.map(o=>`
+    <div class="office-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;flex-wrap:wrap;gap:6px">
+        <div style="font-weight:700;font-size:16px">${o.office_name}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${o.urgent_msg>0?`<span class="tag" style="background:#fee2e2;color:#991b1b">🔴 緊急連絡 ${o.urgent_msg}件</span>`:''}
+          ${o.incidents_month>0?`<span class="tag" style="background:#fef3c7;color:#92400e">⚠️ 今月ヒヤリ ${o.incidents_month}件</span>`:''}
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+        <div class="stat-box"><div class="stat-num" style="color:var(--blue)">${o.planned}</div><div class="stat-label">今日の予定</div></div>
+        <div class="stat-box"><div class="stat-num" style="color:${o.in_visit>0?'#22c55e':'#9ca3af'}">${o.in_visit}</div><div class="stat-label">訪問中🟢</div></div>
+        <div class="stat-box"><div class="stat-num" style="color:#60a5fa">${o.done}</div><div class="stat-label">完了</div></div>
+        <div class="stat-box"><div class="stat-num" style="color:#9ca3af">${o.clients}</div><div class="stat-label">利用者</div></div>
+      </div>
+    </div>`).join('');
+  document.getElementById('accessList').innerHTML=d.offices.map(o=>`<div style="padding:4px 0;border-bottom:1px solid #e5e7eb">✓ ${o.office_name}</div>`).join('');
+}
+
+async function loadTodayVisits(){
+  const el=document.getElementById('todayVisitList');
+  el.innerHTML='<div style="text-align:center;color:#9ca3af;padding:20px">読み込み中...</div>';
+  const oid=document.getElementById('visitOfficeFilter').value;
+  const url=oid?`/hq/today-visits?office_id=${oid}`:'/hq/today-visits';
+  const data=await hqApi('GET',url)||[];
+  if(!data.length){el.innerHTML='<p style="text-align:center;color:#9ca3af;padding:20px">本日の訪問予定はありません</p>';return;}
+  const typeLabel={body:'身体介護',life:'生活援助',both:'身体+生活',accompany:'通院等'};
+  el.innerHTML=`<p style="font-size:13px;color:#6b7280;margin-bottom:12px">計 ${data.length}件</p>`+
+    data.map(v=>{
+      const done=v.checkout_time;const inV=v.checkin_time&&!v.checkout_time;
+      const dotClass=done?'dot-done':inV?'dot-in':'dot-plan';
+      const status=done?'完了':inV?'訪問中':'予定';
+      return `<div class="card" style="padding:12px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="status-dot ${dotClass}"></div>
+            <span style="font-weight:700;font-size:14px">${v.client_name} 様</span>
+            <span class="tag" style="background:${done?'#dbeafe':inV?'#dcfce7':'#f1f5f9'};color:${done?'#1d4ed8':inV?'#166534':'#4b5563'};font-size:11px">${status}</span>
+          </div>
+          <span style="font-size:12px;color:#9ca3af">${v.start_time}〜${v.end_time}</span>
+        </div>
+        <div style="font-size:12px;color:#6b7280">
+          👤 ${v.helper_name||'未割当'} ｜ ${typeLabel[v.service_type]||v.service_type} ｜ ${v.office_name}
+          ${v.address?'｜ 📍'+v.address.slice(0,15):''}
+        </div>
+        ${inV?`<div style="font-size:11px;color:#16a34a;margin-top:4px">✓ チェックイン: ${v.checkin_time}</div>`:''}
+        ${done?`<div style="font-size:11px;color:#2563eb;margin-top:4px">✓ 完了: ${v.checkin_time}〜${v.checkout_time}</div>`:''}
+      </div>`;}).join('');
+}
+
+async function loadIncidents(){
+  const el=document.getElementById('hqIncidentList');
+  el.innerHTML='<div style="text-align:center;color:#9ca3af;padding:20px">読み込み中...</div>';
+  const oid=document.getElementById('incOfficeFilter').value;
+  const y=document.getElementById('incYear').value;
+  const m=document.getElementById('incMonth').value;
+  const params=new URLSearchParams({year:y,month:m});
+  if(oid) params.set('office_id',oid);
+  const data=await hqApi('GET',`/hq/incidents?${params}`)||[];
+  if(!data.length){el.innerHTML='<p style="text-align:center;color:#9ca3af;padding:20px">この期間のデータはありません</p>';return;}
+  const catLabel={fall:'転倒・転落',medication:'服薬ミス',choking:'誤嚥・窒息',complaint:'苦情',other:'その他'};
+  const levStyle={hiyari:'background:#fef3c7;color:#92400e','1':'background:#fed7aa;color:#9a3412','2':'background:#fee2e2;color:#dc2626'};
+  const levLabel={hiyari:'ヒヤリ','1':'事故Lv1','2':'事故Lv2'};
+  el.innerHTML=`<p style="font-size:13px;color:#6b7280;margin-bottom:12px">計 ${data.length}件</p>`+
+    data.map(i=>`<div class="card" style="padding:12px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="tag" style="${levStyle[i.level]||''}">${levLabel[i.level]||i.level}</span>
+          <span style="font-weight:700;font-size:14px">${catLabel[i.category]||i.category}</span>
+        </div>
+        <div style="font-size:12px;color:#9ca3af">${i.office_name} ｜ ${i.incident_date} ${i.incident_time}</div>
+      </div>
+      ${i.client_name?`<div style="font-size:12px;color:#6b7280;margin-bottom:4px">対象: ${i.client_name}様 ｜ 担当: ${i.helper_name||''}</div>`:''}
+      <div style="font-size:13px;color:#374151">${i.description}</div>
+      ${i.action_taken?`<div style="font-size:12px;color:#6b7280;margin-top:4px">対応: ${i.action_taken}</div>`:''}
+    </div>`).join('');
+}
+
+async function exportIncidents(){
+  const oid=document.getElementById('incOfficeFilter').value;
+  const y=document.getElementById('incYear').value;
+  const m=document.getElementById('incMonth').value;
+  const params=new URLSearchParams({year:y,month:m});
+  if(oid) params.set('office_id',oid);
+  const data=await hqApi('GET',`/hq/incidents?${params}`)||[];
+  if(!data.length){alert('データがありません');return;}
+  const catLabel={fall:'転倒・転落',medication:'服薬ミス',choking:'誤嚥・窒息',complaint:'苦情',other:'その他'};
+  const levLabel={hiyari:'ヒヤリハット','1':'事故Lv1','2':'事故Lv2'};
+  const header=['事業所名','発生日','時刻','対象利用者','担当者','種類','レベル','状況','対応内容','対策'];
+  const rows=[header,...data.map(i=>[i.office_name,i.incident_date,i.incident_time,i.client_name||'',i.helper_name||'',catLabel[i.category]||'',levLabel[i.level]||'',i.description,i.action_taken||'',i.followup||''])];
+  const csv='﻿'+rows.map(r=>r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download=`訪問介護ヒヤリハット_${y}年${String(m).padStart(2,'0')}月.csv`;a.click();
+}
+
+async function saveSmtp(){
+  await hqApi('POST','/hq/smtp',{smtp_host:document.getElementById('smtpHost').value.trim(),smtp_port:parseInt(document.getElementById('smtpPort').value)||587,smtp_user:document.getElementById('smtpUser').value.trim(),smtp_pass:document.getElementById('smtpPass').value});
+  alert('SMTP設定を保存しました');
+}
+async function sendReport(){
+  const el=document.getElementById('sendStatus');el.textContent='送信中...';el.style.color='#6b7280';
+  try{const d=await hqApi('POST','/hq/send-report');el.textContent='✅ '+d.message;el.style.color='var(--blue)';}
+  catch(e){el.textContent='❌ 送信失敗。SMTP設定を確認してください。';el.style.color='#dc2626';}
+}
+
+function showPane(name){
+  ['overview','visits','incidents','settings'].forEach(t=>{
+    document.getElementById('pane-'+t).classList.toggle('hidden',t!==name);
+    document.getElementById('sb-'+t)?.classList.toggle('active',t===name);
+    document.getElementById('mn-'+t)?.classList.toggle('active',t===name);
+  });
+  if(name==='visits') loadTodayVisits();
+  if(name==='incidents') loadIncidents();
+}
+
+if(hqToken) startHq();
+else document.getElementById('loginScreen').classList.remove('hidden');
+</script>
+</body>
+</html>
