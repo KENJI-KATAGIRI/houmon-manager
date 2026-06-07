@@ -134,6 +134,58 @@ def init_db():
     );
     """)
     conn.executescript("""
+    CREATE TABLE IF NOT EXISTS handovers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        office_id INTEGER NOT NULL,
+        sender_name TEXT NOT NULL,
+        content TEXT NOT NULL,
+        category TEXT DEFAULT 'general',
+        is_read INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT (datetime('now','localtime')),
+        FOREIGN KEY (office_id) REFERENCES offices(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS care_plans (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        office_id INTEGER NOT NULL,
+        client_id INTEGER NOT NULL UNIQUE,
+        plan_created TEXT,
+        careplan_updated TEXT,
+        next_review TEXT,
+        service_content TEXT,
+        goals TEXT,
+        notes TEXT,
+        updated_at TEXT DEFAULT (datetime('now','localtime')),
+        FOREIGN KEY (office_id) REFERENCES offices(id),
+        FOREIGN KEY (client_id) REFERENCES clients(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS helper_trainings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        office_id INTEGER NOT NULL,
+        helper_id INTEGER,
+        helper_name TEXT NOT NULL,
+        training_type TEXT NOT NULL,
+        plan_date TEXT,
+        done_date TEXT,
+        content TEXT,
+        trainer TEXT,
+        notes TEXT,
+        created_at TEXT DEFAULT (datetime('now','localtime')),
+        FOREIGN KEY (office_id) REFERENCES offices(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS monthly_meetings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        office_id INTEGER NOT NULL,
+        meeting_date TEXT NOT NULL,
+        attendees TEXT,
+        agenda TEXT,
+        minutes TEXT,
+        created_at TEXT DEFAULT (datetime('now','localtime')),
+        FOREIGN KEY (office_id) REFERENCES offices(id)
+    );
+
     CREATE TABLE IF NOT EXISTS hq_accounts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE NOT NULL,

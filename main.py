@@ -85,6 +85,18 @@ class IncidentReq(BaseModel):
     helper_name: Optional[str]=""; location: Optional[str]=""; category: str
     level: Optional[str]="hiyari"; description: str
     action_taken: Optional[str]=""; followup: Optional[str]=""
+class HandoverReq(BaseModel):
+    sender_name: str; content: str; category: Optional[str]="general"
+class CarePlanReq(BaseModel):
+    client_id: int; plan_created: Optional[str]=""; careplan_updated: Optional[str]=""
+    next_review: Optional[str]=""; service_content: Optional[str]=""
+    goals: Optional[str]=""; notes: Optional[str]=""
+class TrainingReq(BaseModel):
+    helper_id: Optional[int]=None; helper_name: str; training_type: str
+    plan_date: Optional[str]=""; done_date: Optional[str]=""
+    content: Optional[str]=""; trainer: Optional[str]=""; notes: Optional[str]=""
+class MeetingReq(BaseModel):
+    meeting_date: str; attendees: Optional[str]=""; agenda: Optional[str]=""; minutes: Optional[str]=""
 
 # ── pages ─────────────────────────────────────────────────────
 @app.get("/", response_class=HTMLResponse)
@@ -136,7 +148,11 @@ async def dashboard(oid: int = Depends(current_office)):
     checked_in = db.execute("""SELECT COUNT(*) as c FROM visit_records WHERE office_id=? AND visit_date=? AND checkin_time!='' AND checkout_time=''""", (oid, today)).fetchone()["c"]
     completed = db.execute("""SELECT COUNT(*) as c FROM visit_records WHERE office_id=? AND visit_date=? AND checkout_time!=''""", (oid, today)).fetchone()["c"]
     unread_msg = db.execute("SELECT COUNT(*) as c FROM messages WHERE office_id=? AND is_read=0", (oid,)).fetchone()["c"]
+    unread_handovers = db.execute("SELECT COUNT(*) as c FROM handovers WHERE office_id=? AND is_read=0", (oid,)).fetchone()["c"]
     incidents_month = db.execute("SELECT COUNT(*) as c FROM incidents WHERE office_id=? AND incident_date LIKE ?", (oid, today[:7]+"%")).fetchone()["c"]
+    in30 = (datetime.now()+timedelta(days=30)).strftime("%Y-%m-%d")
+    cp_overdue = db.execute("SELECT COUNT(*) as c FROM care_plans WHERE office_id=? AND next_review<? AND next_review!=''", (oid, today)).fetchone()["c"]
+    cp_soon = db.execute("SELECT COUNT(*) as c FROM care_plans WHERE office_id=? AND next_review BETWEEN ? AND ? AND next_review!=''", (oid, today, in30)).fetchone()["c"]
     today_visits = db.execute("""
         SELECT vp.*, c.name as client_name, c.address, h.name as helper_name,
                vr.id as record_id, vr.checkin_time, vr.checkout_time, vr.client_condition
@@ -151,7 +167,9 @@ async def dashboard(oid: int = Depends(current_office)):
     return {
         "clients": clients, "helpers": helpers, "today_plans": today_plans,
         "checked_in": checked_in, "completed": completed,
-        "unread_msg": unread_msg, "incidents_month": incidents_month,
+        "unread_msg": unread_msg, "unread_handovers": unread_handovers,
+        "incidents_month": incidents_month,
+        "cp_overdue": cp_overdue, "cp_soon": cp_soon,
         "today_visits": [dict(r) for r in today_visits],
         "recent_msg": [dict(r) for r in recent_msg],
         "today": today, "now_time": now_time
@@ -401,6 +419,120 @@ async def create_incident(req: IncidentReq, oid: int = Depends(current_office)):
     row = db.execute("SELECT * FROM incidents WHERE id=?", (iid,)).fetchone()
     db.close()
     return dict(row)
+
+# ── handovers ─────────────────────────────────────────────────
+@app.get("/api/handovers")
+async def get_handovers(oid: int = Depends(current_office)):
+    db = get_db(); check_active(oid, db)
+    rows = db.execute("SELECT * FROM handovers WHERE office_id=? ORDER BY created_at DESC LIMIT 100", (oid,)).fetchall()
+    db.close(); return [dict(r) for r in rows]
+
+@app.post("/api/handovers")
+async def create_handover(req: HandoverReq, oid: int = Depends(current_office)):
+    db = get_db(); check_active(oid, db)
+    db.execute("INSERT INTO handovers (office_id,sender_name,content,category) VALUES (?,?,?,?)",
+               (oid, req.sender_name, req.content, req.category))
+    db.commit()
+    row = db.execute("SELECT * FROM handovers WHERE rowid=last_insert_rowid()").fetchone()
+    db.close(); return dict(row)
+
+@app.post("/api/handovers/read-all")
+async def read_all_handovers(oid: int = Depends(current_office)):
+    db = get_db(); check_active(oid, db)
+    db.execute("UPDATE handovers SET is_read=1 WHERE office_id=?", (oid,))
+    db.commit(); db.close(); return {"ok": True}
+
+# ── care plans ─────────────────────────────────────────────────
+@app.get("/api/care-plans")
+async def get_care_plans(oid: int = Depends(current_office)):
+    db = get_db(); check_active(oid, db)
+    rows = db.execute("""SELECT cp.*, c.name as client_name FROM care_plans cp
+        JOIN clients c ON c.id=cp.client_id WHERE cp.office_id=?
+        ORDER BY cp.next_review ASC""", (oid,)).fetchall()
+    db.close(); return [dict(r) for r in rows]
+
+@app.post("/api/care-plans")
+async def upsert_care_plan(req: CarePlanReq, oid: int = Depends(current_office)):
+    db = get_db(); check_active(oid, db)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    existing = db.execute("SELECT id FROM care_plans WHERE office_id=? AND client_id=?", (oid, req.client_id)).fetchone()
+    if existing:
+        db.execute("""UPDATE care_plans SET plan_created=?,careplan_updated=?,next_review=?,
+            service_content=?,goals=?,notes=?,updated_at=? WHERE id=?""",
+            (req.plan_created,req.careplan_updated,req.next_review,
+             req.service_content,req.goals,req.notes,now,existing["id"]))
+    else:
+        db.execute("""INSERT INTO care_plans (office_id,client_id,plan_created,careplan_updated,
+            next_review,service_content,goals,notes,updated_at) VALUES (?,?,?,?,?,?,?,?,?)""",
+            (oid,req.client_id,req.plan_created,req.careplan_updated,
+             req.next_review,req.service_content,req.goals,req.notes,now))
+    db.commit()
+    row = db.execute("SELECT cp.*,c.name as client_name FROM care_plans cp JOIN clients c ON c.id=cp.client_id WHERE cp.office_id=? AND cp.client_id=?", (oid, req.client_id)).fetchone()
+    db.close(); return dict(row)
+
+@app.get("/api/care-plans/alerts")
+async def care_plan_alerts(oid: int = Depends(current_office)):
+    db = get_db(); check_active(oid, db)
+    today = datetime.now().strftime("%Y-%m-%d")
+    in30 = (datetime.now()+timedelta(days=30)).strftime("%Y-%m-%d")
+    overdue = db.execute("""SELECT cp.*,c.name as client_name FROM care_plans cp
+        JOIN clients c ON c.id=cp.client_id WHERE cp.office_id=? AND cp.next_review < ? AND cp.next_review!=''
+        ORDER BY cp.next_review""", (oid, today)).fetchall()
+    soon = db.execute("""SELECT cp.*,c.name as client_name FROM care_plans cp
+        JOIN clients c ON c.id=cp.client_id WHERE cp.office_id=? AND cp.next_review BETWEEN ? AND ? AND cp.next_review!=''
+        ORDER BY cp.next_review""", (oid, today, in30)).fetchall()
+    no_plan = db.execute("""SELECT c.id,c.name FROM clients c
+        WHERE c.office_id=? AND c.is_active=1
+        AND NOT EXISTS (SELECT 1 FROM care_plans cp WHERE cp.client_id=c.id)""", (oid,)).fetchall()
+    db.close()
+    return {"overdue": [dict(r) for r in overdue], "soon": [dict(r) for r in soon], "no_plan": [dict(r) for r in no_plan]}
+
+# ── helper trainings ───────────────────────────────────────────
+@app.get("/api/trainings")
+async def get_trainings(oid: int = Depends(current_office)):
+    db = get_db(); check_active(oid, db)
+    rows = db.execute("SELECT * FROM helper_trainings WHERE office_id=? ORDER BY plan_date DESC, created_at DESC", (oid,)).fetchall()
+    db.close(); return [dict(r) for r in rows]
+
+@app.post("/api/trainings")
+async def create_training(req: TrainingReq, oid: int = Depends(current_office)):
+    db = get_db(); check_active(oid, db)
+    db.execute("""INSERT INTO helper_trainings (office_id,helper_id,helper_name,training_type,
+        plan_date,done_date,content,trainer,notes) VALUES (?,?,?,?,?,?,?,?,?)""",
+        (oid,req.helper_id,req.helper_name,req.training_type,
+         req.plan_date,req.done_date,req.content,req.trainer,req.notes))
+    db.commit()
+    row = db.execute("SELECT * FROM helper_trainings WHERE rowid=last_insert_rowid()").fetchone()
+    db.close(); return dict(row)
+
+@app.put("/api/trainings/{tid}/complete")
+async def complete_training(tid: int, oid: int = Depends(current_office)):
+    db = get_db(); check_active(oid, db)
+    today = datetime.now().strftime("%Y-%m-%d")
+    db.execute("UPDATE helper_trainings SET done_date=? WHERE id=? AND office_id=?", (today, tid, oid))
+    db.commit(); db.close(); return {"ok": True}
+
+@app.delete("/api/trainings/{tid}")
+async def delete_training(tid: int, oid: int = Depends(current_office)):
+    db = get_db(); check_active(oid, db)
+    db.execute("DELETE FROM helper_trainings WHERE id=? AND office_id=?", (tid, oid))
+    db.commit(); db.close(); return {"ok": True}
+
+# ── monthly meetings ───────────────────────────────────────────
+@app.get("/api/meetings")
+async def get_meetings(oid: int = Depends(current_office)):
+    db = get_db(); check_active(oid, db)
+    rows = db.execute("SELECT * FROM monthly_meetings WHERE office_id=? ORDER BY meeting_date DESC LIMIT 24", (oid,)).fetchall()
+    db.close(); return [dict(r) for r in rows]
+
+@app.post("/api/meetings")
+async def create_meeting(req: MeetingReq, oid: int = Depends(current_office)):
+    db = get_db(); check_active(oid, db)
+    db.execute("INSERT INTO monthly_meetings (office_id,meeting_date,attendees,agenda,minutes) VALUES (?,?,?,?,?)",
+               (oid, req.meeting_date, req.attendees, req.agenda, req.minutes))
+    db.commit()
+    row = db.execute("SELECT * FROM monthly_meetings WHERE rowid=last_insert_rowid()").fetchone()
+    db.close(); return dict(row)
 
 # ── AI summary ────────────────────────────────────────────────
 @app.post("/api/ai/daily-summary")

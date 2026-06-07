@@ -115,12 +115,13 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
 
   <!-- サ責ダッシュボード -->
   <div id="page-dashboard" class="page active">
-    <div class="grid grid-cols-2 gap-3 mb-4">
+    <div class="grid grid-cols-2 gap-3 mb-3">
       <div class="kpi-card"><div class="kpi-num" id="kpiPlans">-</div><div class="kpi-label">今日の訪問予定</div></div>
       <div class="kpi-card"><div class="kpi-num text-green-500" id="kpiDone">-</div><div class="kpi-label">完了</div></div>
       <div class="kpi-card"><div class="kpi-num text-amber-500" id="kpiIn">-</div><div class="kpi-label">訪問中</div></div>
       <div class="kpi-card"><div class="kpi-num text-red-500" id="kpiMsg">-</div><div class="kpi-label">未読連絡</div></div>
     </div>
+    <div id="dashAlerts"></div>
     <div class="flex justify-between items-center mb-3">
       <div class="section-title mb-0">今日の訪問状況</div>
       <button class="btn btn-amber text-sm px-3 py-2" onclick="generateAiSummary()" id="aiSummaryBtn">✨ AI日報生成</button>
@@ -235,6 +236,56 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
   </div>
 
   <!-- メニュー -->
+  <!-- 申し送り -->
+  <div id="page-handovers" class="page">
+    <div class="flex justify-between items-center mb-3">
+      <div class="section-title mb-0">📋 申し送り・サ責指示記録</div>
+      <button class="btn btn-primary text-sm px-3 py-2" onclick="openHandoverModal()">+ 追加</button>
+    </div>
+    <div class="card mb-3 bg-blue-50 border border-blue-200 text-xs text-blue-700">
+      ✅ 特定事業所加算の算定要件：サ責→ヘルパー間の指示・報告を記録・保存
+    </div>
+    <div id="handoverList"></div>
+  </div>
+
+  <!-- ケアプラン管理 -->
+  <div id="page-careplans" class="page">
+    <div class="section-title">📄 訪問介護計画書 管理</div>
+    <div class="card mb-3 bg-amber-50 border border-amber-200 text-xs text-amber-700">
+      ⚠️ ケアプラン変更後5営業日以内に訪問介護計画書を更新。6ヶ月ごとのモニタリングも必須。
+    </div>
+    <div id="careplanAlertList" class="mb-4"></div>
+    <div class="flex justify-between items-center mb-2">
+      <div class="font-bold text-gray-700">利用者別 計画書一覧</div>
+      <button class="btn btn-primary text-sm px-3 py-2" onclick="openCarePlanModal()">+ 登録/更新</button>
+    </div>
+    <div id="careplanList"></div>
+  </div>
+
+  <!-- 研修管理 -->
+  <div id="page-trainings" class="page">
+    <div class="flex justify-between items-center mb-3">
+      <div class="section-title mb-0">🎓 個別研修計画・実績</div>
+      <button class="btn btn-primary text-sm px-3 py-2" onclick="openTrainingModal()">+ 追加</button>
+    </div>
+    <div class="card mb-3 bg-green-50 border border-green-200 text-xs text-green-700">
+      ✅ 特定事業所加算の要件：全ヘルパーへの個別研修計画+実施記録が必要
+    </div>
+    <div id="trainingList"></div>
+  </div>
+
+  <!-- 定期会議記録 -->
+  <div id="page-meetings" class="page">
+    <div class="flex justify-between items-center mb-3">
+      <div class="section-title mb-0">📝 定期会議記録</div>
+      <button class="btn btn-primary text-sm px-3 py-2" onclick="openMeetingModal()">+ 追加</button>
+    </div>
+    <div class="card mb-3 bg-purple-50 border border-purple-200 text-xs text-purple-700">
+      ✅ 特定事業所加算の要件：全ヘルパー参加の定期会議を月1回以上開催・記録
+    </div>
+    <div id="meetingList"></div>
+  </div>
+
   <div id="page-menu" class="page">
     <div class="section-title">メニュー</div>
     <div class="grid grid-cols-2 gap-3">
@@ -244,6 +295,18 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
       <button class="card text-center cursor-pointer" onclick="showPage('helper-manage')">
         <div class="text-3xl mb-1">🚗</div><div class="font-bold text-sm">ヘルパー管理</div>
       </button>
+      <button class="card text-center cursor-pointer" onclick="showPage('handovers')">
+        <div class="text-3xl mb-1">📋</div><div class="font-bold text-sm">申し送り</div>
+      </button>
+      <button class="card text-center cursor-pointer" onclick="showPage('careplans')">
+        <div class="text-3xl mb-1">📄</div><div class="font-bold text-sm">ケアプラン</div>
+      </button>
+      <button class="card text-center cursor-pointer" onclick="showPage('trainings')">
+        <div class="text-3xl mb-1">🎓</div><div class="font-bold text-sm">研修記録</div>
+      </button>
+      <button class="card text-center cursor-pointer" onclick="showPage('meetings')">
+        <div class="text-3xl mb-1">📝</div><div class="font-bold text-sm">定期会議記録</div>
+      </button>
       <button class="card text-center cursor-pointer" onclick="showPage('incidents')">
         <div class="text-3xl mb-1">⚠️</div><div class="font-bold text-sm">ヒヤリハット</div>
       </button>
@@ -252,6 +315,9 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
       </button>
       <button class="card text-center cursor-pointer" onclick="showPage('settings')">
         <div class="text-3xl mb-1">⚙️</div><div class="font-bold text-sm">設定</div>
+      </button>
+      <button class="card text-center cursor-pointer col-span-2" style="background:linear-gradient(135deg,#0e7490,#0891b2);color:#fff;border:none" onclick="window.location.href='/houmon/hq/auto-login/'">
+        <div class="text-3xl mb-1">🏢</div><div class="font-bold text-sm">本部ポータルへ</div>
       </button>
     </div>
   </div>
@@ -432,6 +498,118 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
   </div>
 </div>
 
+<!-- 申し送りモーダル -->
+<div id="handoverModal" class="modal-overlay" onclick="closeModal('handoverModal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <h3 class="font-bold text-gray-800 mb-3">申し送り・指示を追加</h3>
+    <div class="mb-2">
+      <label class="text-xs text-gray-500">区分</label>
+      <select id="hdCategory" class="input mt-1">
+        <option value="general">一般申し送り</option>
+        <option value="instruction">サ責指示</option>
+        <option value="report">ヘルパー報告</option>
+        <option value="urgent">緊急</option>
+      </select>
+    </div>
+    <div class="mb-2">
+      <label class="text-xs text-gray-500">送信者名</label>
+      <input id="hdSenderName" class="input mt-1" placeholder="例: 田中サ責">
+    </div>
+    <div class="mb-3">
+      <label class="text-xs text-gray-500">内容</label>
+      <textarea id="hdContent" class="input mt-1" rows="4" placeholder="申し送り内容を入力..."></textarea>
+    </div>
+    <button class="btn btn-primary w-full" onclick="submitHandover()">送信</button>
+  </div>
+</div>
+
+<!-- ケアプランモーダル -->
+<div id="carePlanModal" class="modal-overlay" onclick="closeModal('carePlanModal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <h3 class="font-bold text-gray-800 mb-3">訪問介護計画書 登録/更新</h3>
+    <div class="mb-2">
+      <label class="text-xs text-gray-500">利用者</label>
+      <select id="cpClient" class="input mt-1"></select>
+    </div>
+    <div class="grid grid-cols-2 gap-2 mb-2">
+      <div><label class="text-xs text-gray-500">計画書作成日</label><input id="cpCreated" type="date" class="input mt-1"></div>
+      <div><label class="text-xs text-gray-500">ケアプラン更新日</label><input id="cpUpdated" type="date" class="input mt-1"></div>
+    </div>
+    <div class="mb-2">
+      <label class="text-xs text-gray-500">次回モニタリング期限</label>
+      <input id="cpReview" type="date" class="input mt-1">
+    </div>
+    <div class="mb-2">
+      <label class="text-xs text-gray-500">支援目標・備考</label>
+      <textarea id="cpGoals" class="input mt-1" rows="2" placeholder="支援目標を入力..."></textarea>
+    </div>
+    <div class="mb-3">
+      <label class="text-xs text-gray-500">特記事項</label>
+      <textarea id="cpNotes" class="input mt-1" rows="2"></textarea>
+    </div>
+    <button class="btn btn-primary w-full" onclick="submitCarePlan()">保存</button>
+  </div>
+</div>
+
+<!-- 研修モーダル -->
+<div id="trainingModal" class="modal-overlay" onclick="closeModal('trainingModal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <h3 class="font-bold text-gray-800 mb-3">研修計画を追加</h3>
+    <div class="mb-2">
+      <label class="text-xs text-gray-500">研修種別</label>
+      <select id="trType" class="input mt-1">
+        <option value="abuse">虐待防止研修</option>
+        <option value="infection">感染症研修</option>
+        <option value="bcp">BCP訓練</option>
+        <option value="career">キャリアアップ研修</option>
+        <option value="skill">技術研修</option>
+        <option value="other">その他</option>
+      </select>
+    </div>
+    <div class="mb-2">
+      <label class="text-xs text-gray-500">対象ヘルパー名</label>
+      <input id="trHelperName" class="input mt-1" placeholder="例: 佐藤 花子">
+    </div>
+    <div class="mb-2">
+      <label class="text-xs text-gray-500">予定日</label>
+      <input id="trPlanDate" type="date" class="input mt-1">
+    </div>
+    <div class="mb-3">
+      <label class="text-xs text-gray-500">研修内容・備考</label>
+      <textarea id="trContent" class="input mt-1" rows="2"></textarea>
+    </div>
+    <button class="btn btn-primary w-full" onclick="submitTraining()">追加</button>
+  </div>
+</div>
+
+<!-- 会議記録モーダル -->
+<div id="meetingModal" class="modal-overlay" onclick="closeModal('meetingModal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <h3 class="font-bold text-gray-800 mb-3">定期会議記録を追加</h3>
+    <div class="mb-2">
+      <label class="text-xs text-gray-500">開催日</label>
+      <input id="mtDate" type="date" class="input mt-1">
+    </div>
+    <div class="mb-2">
+      <label class="text-xs text-gray-500">参加者（全員記載）</label>
+      <input id="mtAttendees" class="input mt-1" placeholder="例: 田中サ責、佐藤ヘルパー、山田ヘルパー">
+    </div>
+    <div class="mb-2">
+      <label class="text-xs text-gray-500">議題</label>
+      <input id="mtAgenda" class="input mt-1" placeholder="例: 利用者状況確認、研修計画">
+    </div>
+    <div class="mb-3">
+      <label class="text-xs text-gray-500">議事内容</label>
+      <textarea id="mtMinutes" class="input mt-1" rows="4" placeholder="会議の内容を記録..."></textarea>
+    </div>
+    <button class="btn btn-primary w-full" onclick="submitMeeting()">保存</button>
+  </div>
+</div>
+
 <script>
 const API = '/houmon/api';
 let token = localStorage.getItem('houmon_token') || '';
@@ -462,6 +640,10 @@ function showPage(name) {
   if(name==='export') initExport();
   if(name==='plan-add') initPlanAdd();
   if(name==='settings') loadSettings();
+  if(name==='handovers') loadHandovers();
+  if(name==='careplans') loadCarePlans();
+  if(name==='trainings') loadTrainings();
+  if(name==='meetings') loadMeetings();
 }
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
@@ -544,6 +726,7 @@ async function loadDashboard() {
     document.getElementById('kpiMsg').textContent=d.unread_msg;
     const mb=document.getElementById('msgBadge');
     if(d.unread_msg>0){mb.textContent=d.unread_msg;mb.classList.remove('hidden');}else mb.classList.add('hidden');
+    renderDashAlerts(d);
     const tvEl=document.getElementById('todayVisits');
     if(!d.today_visits.length){tvEl.innerHTML='<p class="text-gray-400 text-sm text-center py-3">本日の訪問予定はありません</p>';return;}
     tvEl.innerHTML=d.today_visits.map(v=>renderVisitCard(v)).join('');
@@ -812,6 +995,143 @@ async function downloadCsv(type='visit-records', label='訪問記録'){const y=d
 
 // ── settings ──
 async function loadSettings(){const me=await api('GET','/me');if(me){const planLabel={trial:'トライアル',standard:'スタンダード'};document.getElementById('planBadge').textContent=planLabel[me.plan]||me.plan;document.getElementById('planInfo').innerHTML=`<div>プラン: <strong>${planLabel[me.plan]||me.plan}</strong></div><div>ステータス: <strong>${me.subscription_status==='trial'?'無料トライアル中':'有効'}</strong></div>${me.trial_end?`<div class="text-gray-400 text-xs mt-1">トライアル終了: ${me.trial_end?.slice(0,10)}</div>`:''}`; }}
+
+// ── dashboard alerts ──
+function renderDashAlerts(d) {
+  const el = document.getElementById('dashAlerts');
+  let html = '';
+  if(d.cp_overdue > 0) html += `<div class="card mb-2 bg-red-50 border border-red-300 cursor-pointer" onclick="showPage('careplans')"><div class="flex items-center gap-2"><span class="text-lg">🔴</span><div><div class="font-bold text-red-700 text-sm">訪問介護計画書 期限超過 ${d.cp_overdue}件</div><div class="text-xs text-red-500">今すぐ更新が必要です →</div></div></div></div>`;
+  if(d.cp_soon > 0) html += `<div class="card mb-2 bg-amber-50 border border-amber-300 cursor-pointer" onclick="showPage('careplans')"><div class="flex items-center gap-2"><span class="text-lg">⚠️</span><div><div class="font-bold text-amber-700 text-sm">訪問介護計画書 30日以内に期限 ${d.cp_soon}件</div><div class="text-xs text-amber-500">早めに更新してください →</div></div></div></div>`;
+  if(d.unread_handovers > 0) html += `<div class="card mb-2 bg-blue-50 border border-blue-200 cursor-pointer" onclick="showPage('handovers')"><div class="flex items-center gap-2"><span class="text-lg">📋</span><div><div class="font-bold text-blue-700 text-sm">未読の申し送り ${d.unread_handovers}件</div><div class="text-xs text-blue-500">確認する →</div></div></div></div>`;
+  el.innerHTML = html;
+}
+
+// ── handovers ──
+async function loadHandovers() {
+  const el = document.getElementById('handoverList');
+  el.innerHTML = '<div class="spinner"></div>';
+  const data = await api('GET', '/handovers') || [];
+  await api('POST', '/handovers/read-all');
+  const catLabel = {general:'一般',instruction:'サ責指示',report:'報告',urgent:'緊急'};
+  const catColor = {general:'tag-blue',instruction:'tag-green',report:'tag-gray',urgent:'tag-red'};
+  el.innerHTML = data.length ? data.map(h => `
+    <div class="card mb-2">
+      <div class="flex justify-between items-start mb-1">
+        <div class="flex items-center gap-2">
+          <span class="tag ${catColor[h.category]||'tag-blue'}">${catLabel[h.category]||h.category}</span>
+          <span class="font-bold text-sm">${h.sender_name}</span>
+        </div>
+        <span class="text-xs text-gray-400">${h.created_at?.slice(0,16)||''}</span>
+      </div>
+      <div class="text-sm text-gray-700 whitespace-pre-wrap">${h.content}</div>
+    </div>`).join('') : '<p class="text-gray-400 text-center py-4">申し送りがありません</p>';
+}
+function openHandoverModal() {
+  document.getElementById('hdSenderName').value = '';
+  document.getElementById('hdContent').value = '';
+  document.getElementById('hdCategory').value = 'general';
+  openModal('handoverModal');
+}
+async function submitHandover() {
+  const sender = document.getElementById('hdSenderName').value.trim();
+  const content = document.getElementById('hdContent').value.trim();
+  if(!sender || !content) { alert('送信者名と内容を入力してください'); return; }
+  await api('POST', '/handovers', {sender_name:sender, content, category:document.getElementById('hdCategory').value});
+  closeModal('handoverModal'); loadHandovers(); loadDashboard();
+}
+
+// ── care plans ──
+async function loadCarePlans() {
+  const [alerts, plans] = await Promise.all([api('GET','/care-plans/alerts'), api('GET','/care-plans')]);
+  const al = document.getElementById('careplanAlertList');
+  let ahtml = '';
+  if(alerts?.overdue?.length) ahtml += `<div class="card bg-red-50 border border-red-300 mb-2"><div class="font-bold text-red-700 text-sm mb-2">🔴 期限超過（${alerts.overdue.length}件）</div>${alerts.overdue.map(p=>`<div class="text-sm text-red-600">${p.client_name} — 期限: ${p.next_review}</div>`).join('')}</div>`;
+  if(alerts?.soon?.length) ahtml += `<div class="card bg-amber-50 border border-amber-300 mb-2"><div class="font-bold text-amber-700 text-sm mb-2">⚠️ 30日以内に期限（${alerts.soon.length}件）</div>${alerts.soon.map(p=>`<div class="text-sm text-amber-600">${p.client_name} — 期限: ${p.next_review}</div>`).join('')}</div>`;
+  if(alerts?.no_plan?.length) ahtml += `<div class="card bg-gray-50 border border-gray-200 mb-2"><div class="font-bold text-gray-600 text-sm mb-2">📄 計画書未登録（${alerts.no_plan.length}件）</div>${alerts.no_plan.map(p=>`<div class="text-sm text-gray-500">${p.name}</div>`).join('')}</div>`;
+  al.innerHTML = ahtml || '<div class="card bg-green-50 border border-green-200 text-green-700 text-sm">✅ 期限超過なし</div>';
+  const pl = document.getElementById('careplanList');
+  pl.innerHTML = (plans||[]).length ? plans.map(p=>`
+    <div class="card mb-2 cursor-pointer" onclick="openCarePlanModal(${JSON.stringify(p).replace(/"/g,'&quot;')})">
+      <div class="flex justify-between"><span class="font-bold">${p.client_name}</span><span class="text-xs text-gray-400">更新: ${p.updated_at?.slice(0,10)||'未設定'}</span></div>
+      <div class="text-xs text-gray-500 mt-1">次回モニタリング: ${p.next_review||'未設定'}</div>
+    </div>`).join('') : '<p class="text-gray-400 text-center py-4">計画書が登録されていません</p>';
+}
+async function openCarePlanModal(cp=null) {
+  if(!clients.length) await loadClientsData();
+  const sel = document.getElementById('cpClient');
+  sel.innerHTML = clients.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  if(cp) { sel.value=cp.client_id; ['cpCreated','cpUpdated','cpReview'].forEach((id,i)=>{document.getElementById(id).value=[cp.plan_created,cp.careplan_updated,cp.next_review][i]||'';}); document.getElementById('cpGoals').value=cp.goals||''; document.getElementById('cpNotes').value=cp.notes||''; }
+  else { ['cpCreated','cpUpdated','cpReview','cpGoals','cpNotes'].forEach(id=>document.getElementById(id).value=''); }
+  openModal('carePlanModal');
+}
+async function submitCarePlan() {
+  const body = {client_id:parseInt(document.getElementById('cpClient').value),plan_created:document.getElementById('cpCreated').value,careplan_updated:document.getElementById('cpUpdated').value,next_review:document.getElementById('cpReview').value,goals:document.getElementById('cpGoals').value.trim(),notes:document.getElementById('cpNotes').value.trim()};
+  await api('POST','/care-plans',body); closeModal('carePlanModal'); loadCarePlans();
+}
+
+// ── trainings ──
+async function loadTrainings() {
+  const el = document.getElementById('trainingList');
+  el.innerHTML = '<div class="spinner"></div>';
+  const data = await api('GET', '/trainings') || [];
+  const typeLabel = {abuse:'虐待防止研修',infection:'感染症研修',bcp:'BCP訓練',career:'キャリアアップ研修',skill:'技術研修',other:'その他'};
+  el.innerHTML = data.length ? data.map(t=>`
+    <div class="card mb-2">
+      <div class="flex justify-between items-start">
+        <div>
+          <span class="tag tag-blue mr-1">${typeLabel[t.training_type]||t.training_type}</span>
+          <span class="font-bold text-sm">${t.helper_name}</span>
+        </div>
+        <div class="flex gap-1 items-center">
+          ${t.done_date ? `<span class="tag tag-green text-xs">✓ 完了</span>` : `<button class="btn btn-outline text-xs py-0.5 px-2" onclick="completeTraining(${t.id})">完了</button>`}
+        </div>
+      </div>
+      <div class="text-xs text-gray-500 mt-1">予定: ${t.plan_date||'未設定'} ${t.done_date?`| 実施: ${t.done_date}`:''}</div>
+      ${t.content?`<div class="text-xs text-gray-600 mt-1">${t.content}</div>`:''}
+    </div>`).join('') : '<p class="text-gray-400 text-center py-4">研修記録がありません</p>';
+}
+function openTrainingModal() {
+  if(!helpers.length) loadHelpersData();
+  document.getElementById('trHelperName').value='';
+  document.getElementById('trType').value='abuse';
+  document.getElementById('trPlanDate').value='';
+  document.getElementById('trContent').value='';
+  openModal('trainingModal');
+}
+async function submitTraining() {
+  const name = document.getElementById('trHelperName').value.trim();
+  if(!name) { alert('ヘルパー名を入力してください'); return; }
+  await api('POST','/trainings',{helper_name:name,training_type:document.getElementById('trType').value,plan_date:document.getElementById('trPlanDate').value,content:document.getElementById('trContent').value.trim()});
+  closeModal('trainingModal'); loadTrainings();
+}
+async function completeTraining(id) { await api('PUT',`/trainings/${id}/complete`); loadTrainings(); }
+
+// ── meetings ──
+async function loadMeetings() {
+  const el = document.getElementById('meetingList');
+  el.innerHTML = '<div class="spinner"></div>';
+  const data = await api('GET', '/meetings') || [];
+  el.innerHTML = data.length ? data.map(m=>`
+    <div class="card mb-2">
+      <div class="flex justify-between"><span class="font-bold">${m.meeting_date} 定期会議</span><span class="text-xs text-gray-400">${m.created_at?.slice(0,10)||''}</span></div>
+      ${m.attendees?`<div class="text-xs text-gray-500 mt-1">参加者: ${m.attendees}</div>`:''}
+      ${m.agenda?`<div class="text-xs text-gray-600 mt-1">議題: ${m.agenda}</div>`:''}
+      ${m.minutes?`<div class="text-xs text-gray-700 mt-1 whitespace-pre-wrap">${m.minutes}</div>`:''}
+    </div>`).join('') : '<p class="text-gray-400 text-center py-4">会議記録がありません</p>';
+}
+function openMeetingModal() {
+  document.getElementById('mtDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('mtAttendees').value = '';
+  document.getElementById('mtAgenda').value = '';
+  document.getElementById('mtMinutes').value = '';
+  openModal('meetingModal');
+}
+async function submitMeeting() {
+  const date = document.getElementById('mtDate').value;
+  if(!date) { alert('開催日を入力してください'); return; }
+  await api('POST','/meetings',{meeting_date:date,attendees:document.getElementById('mtAttendees').value.trim(),agenda:document.getElementById('mtAgenda').value.trim(),minutes:document.getElementById('mtMinutes').value.trim()});
+  closeModal('meetingModal'); loadMeetings();
+}
 
 if(token) startApp();
 else document.getElementById('loginScreen').classList.remove('hidden');
