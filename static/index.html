@@ -483,6 +483,7 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
         <select id="incLevel"><option value="hiyari">ヒヤリハット</option><option value="1">事故Lv1</option><option value="2">事故Lv2</option></select>
       </div>
     </div>
+    <div id="incDraftBanner" style="display:none;background:#fef3c7;color:#92400e;border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:10px"></div>
     <div class="mb-2"><label>状況・詳細</label><textarea id="incDesc" rows="3" placeholder="いつ・どこで・何が起きたか"></textarea></div>
     <div class="mb-2"><label>対応内容</label><textarea id="incAction" rows="2"></textarea></div>
     <div class="mb-3"><label>今後の対策</label><textarea id="incFollowup" rows="2"></textarea></div>
@@ -518,6 +519,7 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
     </div>
     <div class="mb-3">
       <label class="text-xs text-gray-500">内容</label>
+      <div id="hdDraftBanner" style="display:none;background:#fef3c7;color:#92400e;border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:8px"></div>
       <textarea id="hdContent" class="input mt-1" rows="4" placeholder="申し送り内容を入力..."></textarea>
     </div>
     <button class="btn btn-primary w-full" onclick="submitHandover()">送信</button>
@@ -543,6 +545,7 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
     </div>
     <div class="mb-2">
       <label class="text-xs text-gray-500">支援目標・備考</label>
+      <div id="cpDraftBanner" style="display:none;background:#fef3c7;color:#92400e;border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:8px"></div>
       <textarea id="cpGoals" class="input mt-1" rows="2" placeholder="支援目標を入力..."></textarea>
     </div>
     <div class="mb-3">
@@ -579,6 +582,7 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
     </div>
     <div class="mb-3">
       <label class="text-xs text-gray-500">研修内容・備考</label>
+      <div id="trDraftBanner" style="display:none;background:#fef3c7;color:#92400e;border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:8px"></div>
       <textarea id="trContent" class="input mt-1" rows="2"></textarea>
     </div>
     <button class="btn btn-primary w-full" onclick="submitTraining()">追加</button>
@@ -604,6 +608,7 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
     </div>
     <div class="mb-3">
       <label class="text-xs text-gray-500">議事内容</label>
+      <div id="mtDraftBanner" style="display:none;background:#fef3c7;color:#92400e;border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:8px"></div>
       <textarea id="mtMinutes" class="input mt-1" rows="4" placeholder="会議の内容を記録..."></textarea>
     </div>
     <button class="btn btn-primary w-full" onclick="submitMeeting()">保存</button>
@@ -982,9 +987,9 @@ async function submitMessage(){const content=document.getElementById('msgContent
 async function readAllMessages(){await api('PUT','/messages/read-all');loadMessages();loadDashboard();}
 
 // ── incidents ──
-function openIncidentModal(){const now=new Date();document.getElementById('incDate').value=now.toISOString().slice(0,10);document.getElementById('incTime').value=now.toTimeString().slice(0,5);openModal('incidentModal');}
+function openIncidentModal(){const now=new Date();document.getElementById('incDate').value=now.toISOString().slice(0,10);document.getElementById('incTime').value=now.toTimeString().slice(0,5);openModal('incidentModal');applyDrafts(['incDesc','incAction','incFollowup'],'incDraftBanner');}
 async function loadIncidents(){const el=document.getElementById('incidentList');el.innerHTML='<div class="spinner"></div>';const data=await api('GET','/incidents')||[];const catLabel={fall:'転倒・転落',medication:'服薬ミス',choking:'誤嚥・窒息',complaint:'苦情',other:'その他'};const levColor={hiyari:'tag-amber','1':'tag-amber','2':'tag-red'};const levLabel={hiyari:'ヒヤリ','1':'事故Lv1','2':'事故Lv2'};el.innerHTML=data.length?data.map(i=>`<div class="card mb-2"><div class="flex justify-between mb-1"><div><span class="tag ${levColor[i.level]} mr-1">${levLabel[i.level]}</span><span class="font-bold text-sm">${catLabel[i.category]||i.category}</span></div><span class="text-xs text-gray-400">${i.incident_date} ${i.incident_time}</span></div>${i.client_name?`<div class="text-xs text-gray-500 mb-1">対象:${i.client_name}</div>`:''}<div class="text-sm text-gray-700">${i.description}</div>${i.action_taken?`<div class="text-xs text-gray-500 mt-1">対応:${i.action_taken}</div>`:''}</div>`).join(''):'<p class="text-gray-400 text-center py-4">記録なし</p>';}
-async function submitIncident(){const body={client_id:parseInt(document.getElementById('incClient').value)||null,incident_date:document.getElementById('incDate').value,incident_time:document.getElementById('incTime').value,helper_name:document.getElementById('incHelper').value.trim(),category:document.getElementById('incCategory').value,level:document.getElementById('incLevel').value,description:document.getElementById('incDesc').value.trim(),action_taken:document.getElementById('incAction').value.trim(),followup:document.getElementById('incFollowup').value.trim()};if(!body.description){alert('状況を入力してください');return;}await api('POST','/incidents',body);closeModal('incidentModal');loadIncidents();}
+async function submitIncident(){const body={client_id:parseInt(document.getElementById('incClient').value)||null,incident_date:document.getElementById('incDate').value,incident_time:document.getElementById('incTime').value,helper_name:document.getElementById('incHelper').value.trim(),category:document.getElementById('incCategory').value,level:document.getElementById('incLevel').value,description:document.getElementById('incDesc').value.trim(),action_taken:document.getElementById('incAction').value.trim(),followup:document.getElementById('incFollowup').value.trim()};if(!body.description){alert('状況を入力してください');return;}await api('POST','/incidents',body);clearDrafts(['incDesc','incAction','incFollowup']);closeModal('incidentModal');loadIncidents();}
 
 // ── AI summary ──
 async function generateAiSummary(){const btn=document.getElementById('aiSummaryBtn');btn.textContent='⏳ 生成中...';btn.disabled=true;try{const d=await api('POST','/ai/daily-summary');if(!d)throw new Error();document.getElementById('aiSummaryText').textContent=d.summary;document.getElementById('aiSummaryBanner').classList.remove('hidden');}catch(e){alert(e?.detail||'AI生成に失敗しました。本日の訪問記録（チェックアウト済み）が必要です。');}finally{btn.textContent='✨ AI日報生成';btn.disabled=false;}}
@@ -1031,13 +1036,14 @@ function openHandoverModal() {
   document.getElementById('hdContent').value = '';
   document.getElementById('hdCategory').value = 'general';
   openModal('handoverModal');
+  applyDrafts(['hdContent'], 'hdDraftBanner');
 }
 async function submitHandover() {
   const sender = document.getElementById('hdSenderName').value.trim();
   const content = document.getElementById('hdContent').value.trim();
   if(!sender || !content) { alert('送信者名と内容を入力してください'); return; }
   await api('POST', '/handovers', {sender_name:sender, content, category:document.getElementById('hdCategory').value});
-  closeModal('handoverModal'); loadHandovers(); loadDashboard();
+  clearDrafts(['hdContent']); closeModal('handoverModal'); loadHandovers(); loadDashboard();
 }
 
 // ── care plans ──
@@ -1061,12 +1067,12 @@ async function openCarePlanModal(cp=null) {
   const sel = document.getElementById('cpClient');
   sel.innerHTML = clients.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
   if(cp) { sel.value=cp.client_id; ['cpCreated','cpUpdated','cpReview'].forEach((id,i)=>{document.getElementById(id).value=[cp.plan_created,cp.careplan_updated,cp.next_review][i]||'';}); document.getElementById('cpGoals').value=cp.goals||''; document.getElementById('cpNotes').value=cp.notes||''; }
-  else { ['cpCreated','cpUpdated','cpReview','cpGoals','cpNotes'].forEach(id=>document.getElementById(id).value=''); }
+  else { ['cpCreated','cpUpdated','cpReview','cpGoals','cpNotes'].forEach(id=>document.getElementById(id).value=''); applyDrafts(['cpGoals','cpNotes'],'cpDraftBanner'); }
   openModal('carePlanModal');
 }
 async function submitCarePlan() {
   const body = {client_id:parseInt(document.getElementById('cpClient').value),plan_created:document.getElementById('cpCreated').value,careplan_updated:document.getElementById('cpUpdated').value,next_review:document.getElementById('cpReview').value,goals:document.getElementById('cpGoals').value.trim(),notes:document.getElementById('cpNotes').value.trim()};
-  await api('POST','/care-plans',body); closeModal('carePlanModal'); loadCarePlans();
+  await api('POST','/care-plans',body); clearDrafts(['cpGoals','cpNotes']); closeModal('carePlanModal'); loadCarePlans();
 }
 
 // ── trainings ──
@@ -1097,12 +1103,13 @@ function openTrainingModal() {
   document.getElementById('trPlanDate').value='';
   document.getElementById('trContent').value='';
   openModal('trainingModal');
+  applyDrafts(['trContent'], 'trDraftBanner');
 }
 async function submitTraining() {
   const name = document.getElementById('trHelperName').value.trim();
   if(!name) { alert('ヘルパー名を入力してください'); return; }
   await api('POST','/trainings',{helper_name:name,training_type:document.getElementById('trType').value,plan_date:document.getElementById('trPlanDate').value,content:document.getElementById('trContent').value.trim()});
-  closeModal('trainingModal'); loadTrainings();
+  clearDrafts(['trContent']); closeModal('trainingModal'); loadTrainings();
 }
 async function completeTraining(id) { await api('PUT',`/trainings/${id}/complete`); loadTrainings(); }
 
@@ -1125,16 +1132,53 @@ function openMeetingModal() {
   document.getElementById('mtAgenda').value = '';
   document.getElementById('mtMinutes').value = '';
   openModal('meetingModal');
+  applyDrafts(['mtMinutes'], 'mtDraftBanner');
 }
 async function submitMeeting() {
   const date = document.getElementById('mtDate').value;
   if(!date) { alert('開催日を入力してください'); return; }
   await api('POST','/meetings',{meeting_date:date,attendees:document.getElementById('mtAttendees').value.trim(),agenda:document.getElementById('mtAgenda').value.trim(),minutes:document.getElementById('mtMinutes').value.trim()});
-  closeModal('meetingModal'); loadMeetings();
+  clearDrafts(['mtMinutes']); closeModal('meetingModal'); loadMeetings();
 }
 
 if(token) startApp();
 else document.getElementById('loginScreen').classList.remove('hidden');
+
+// ── 自動保存ユーティリティ ───────────────────────────────────────────────
+(function(){
+  const NS='houmon_draft_';
+  document.addEventListener('input',function(e){
+    const el=e.target;
+    if(el.tagName!=='TEXTAREA'||!el.id) return;
+    localStorage.setItem(NS+el.id,JSON.stringify({v:el.value,t:new Date().toLocaleString('ja-JP')}));
+    _flash();
+  });
+  window.applyDrafts=function(fields,bid){
+    let ok=false,ts='';
+    fields.forEach(function(id){
+      try{const d=JSON.parse(localStorage.getItem(NS+id)||'null');if(d&&d.v){const el=document.getElementById(id);if(el){el.value=d.v;ok=true;ts=d.t;}}}catch(_){}
+    });
+    if(ok&&bid){
+      const b=document.getElementById(bid);
+      if(b){b.dataset.fields=JSON.stringify(fields);b.innerHTML='📝 下書きを復元しました（'+ts+'）<button onclick="discardDrafts(\''+bid+'\')" style="margin-left:8px;font-size:11px;text-decoration:underline;border:none;background:none;cursor:pointer;color:inherit">クリア</button>';b.style.display='block';}
+    }
+  };
+  window.clearDrafts=function(fields){fields.forEach(function(id){localStorage.removeItem(NS+id);});};
+  window.discardDrafts=function(bid){
+    const b=document.getElementById(bid);if(!b)return;
+    const fields=JSON.parse(b.dataset.fields||'[]');
+    clearDrafts(fields);
+    fields.forEach(function(id){const el=document.getElementById(id);if(el)el.value='';});
+    b.style.display='none';
+  };
+  function _flash(){
+    let el=document.getElementById('_asFlash');
+    if(!el){el=document.createElement('div');el.id='_asFlash';el.style.cssText='position:fixed;bottom:72px;right:12px;background:rgba(30,41,59,.85);color:#fff;padding:5px 12px;border-radius:20px;font-size:12px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none';document.body.appendChild(el);}
+    el.textContent='💾 自動保存';el.style.opacity='1';
+    clearTimeout(el._t);el._t=setTimeout(function(){el.style.opacity='0';},1500);
+  }
+})();
+// ────────────────────────────────────────────────────────────────────────
 </script>
 </body>
 </html>
