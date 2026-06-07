@@ -109,8 +109,7 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
     </div>
     <div class="flex items-center gap-2">
       <span id="planBadge" class="tag tag-blue text-xs">トライアル</span>
-      <button onclick="window.location.href='/houmon/hq/auto-login/'" style="background:#0891b2;color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer">🏢 本部</button>
-      <button onclick="doLogout()" class="text-gray-400 text-xs">ログアウト</button>
+<button onclick="doLogout()" class="text-gray-400 text-xs">ログアウト</button>
     </div>
   </div>
 
@@ -123,6 +122,7 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
       <div class="kpi-card"><div class="kpi-num text-red-500" id="kpiMsg">-</div><div class="kpi-label">未読連絡</div></div>
     </div>
     <div id="dashAlerts"></div>
+    <div id="pendingDraftsBanner" style="display:none;background:#fef3c7;border:1px solid #f59e0b;border-radius:12px;padding:12px;margin-bottom:10px;color:#92400e;font-size:13px"></div>
     <div class="flex justify-between items-center mb-3">
       <div class="section-title mb-0">今日の訪問状況</div>
       <button class="btn btn-amber text-sm px-3 py-2" onclick="generateAiSummary()" id="aiSummaryBtn">✨ AI日報生成</button>
@@ -222,7 +222,10 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
         </div>
       </div>
       <textarea id="msgContent" rows="3" placeholder="連絡内容を入力..."></textarea>
-      <button class="btn btn-primary w-full mt-3" onclick="submitMessage()">送信する</button>
+      <div class="flex gap-2 mt-3">
+        <button class="btn btn-outline flex-1" onclick="savePageDraft(['msgContent'])">💾 一次保存</button>
+        <button class="btn btn-primary flex-1" onclick="submitMessage()">✅ 入力完了</button>
+      </div>
     </div>
     <div id="messageList"></div>
   </div>
@@ -488,7 +491,10 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
     <div class="mb-2"><label>状況・詳細</label><textarea id="incDesc" rows="3" placeholder="いつ・どこで・何が起きたか"></textarea></div>
     <div class="mb-2"><label>対応内容</label><textarea id="incAction" rows="2"></textarea></div>
     <div class="mb-3"><label>今後の対策</label><textarea id="incFollowup" rows="2"></textarea></div>
-    <button class="btn btn-primary w-full" onclick="submitIncident()">記録する</button>
+    <div class="flex gap-2">
+      <button class="btn btn-outline flex-1" onclick="saveModalDraft(['incDesc','incAction','incFollowup'],'incidentModal')">💾 一次保存</button>
+      <button class="btn btn-primary flex-1" onclick="submitIncident()">✅ 入力完了</button>
+    </div>
   </div>
 </div>
 
@@ -523,7 +529,10 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
       <div id="hdDraftBanner" style="display:none;background:#fef3c7;color:#92400e;border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:8px"></div>
       <textarea id="hdContent" class="input mt-1" rows="4" placeholder="申し送り内容を入力..."></textarea>
     </div>
-    <button class="btn btn-primary w-full" onclick="submitHandover()">送信</button>
+    <div class="flex gap-2">
+      <button class="btn btn-outline flex-1" onclick="saveModalDraft(['hdContent'],'handoverModal')">💾 一次保存</button>
+      <button class="btn btn-primary flex-1" onclick="submitHandover()">✅ 入力完了</button>
+    </div>
   </div>
 </div>
 
@@ -553,7 +562,10 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
       <label class="text-xs text-gray-500">特記事項</label>
       <textarea id="cpNotes" class="input mt-1" rows="2"></textarea>
     </div>
-    <button class="btn btn-primary w-full" onclick="submitCarePlan()">保存</button>
+    <div class="flex gap-2">
+      <button class="btn btn-outline flex-1" onclick="saveModalDraft(['cpGoals','cpNotes'],'carePlanModal')">💾 一次保存</button>
+      <button class="btn btn-primary flex-1" onclick="submitCarePlan()">✅ 入力完了</button>
+    </div>
   </div>
 </div>
 
@@ -586,7 +598,10 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
       <div id="trDraftBanner" style="display:none;background:#fef3c7;color:#92400e;border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:8px"></div>
       <textarea id="trContent" class="input mt-1" rows="2"></textarea>
     </div>
-    <button class="btn btn-primary w-full" onclick="submitTraining()">追加</button>
+    <div class="flex gap-2">
+      <button class="btn btn-outline flex-1" onclick="saveModalDraft(['trContent'],'trainingModal')">💾 一次保存</button>
+      <button class="btn btn-primary flex-1" onclick="submitTraining()">✅ 入力完了</button>
+    </div>
   </div>
 </div>
 
@@ -612,7 +627,10 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
       <div id="mtDraftBanner" style="display:none;background:#fef3c7;color:#92400e;border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:8px"></div>
       <textarea id="mtMinutes" class="input mt-1" rows="4" placeholder="会議の内容を記録..."></textarea>
     </div>
-    <button class="btn btn-primary w-full" onclick="submitMeeting()">保存</button>
+    <div class="flex gap-2">
+      <button class="btn btn-outline flex-1" onclick="saveModalDraft(['mtMinutes'],'meetingModal')">💾 一次保存</button>
+      <button class="btn btn-primary flex-1" onclick="submitMeeting()">✅ 入力完了</button>
+    </div>
   </div>
 </div>
 
@@ -702,6 +720,7 @@ async function startApp() {
   await loadClientsData();
   await loadHelpersData();
   loadDashboard();
+  checkPendingDrafts();
 }
 
 async function loadClientsData() {
@@ -990,7 +1009,7 @@ async function readAllMessages(){await api('PUT','/messages/read-all');loadMessa
 // ── incidents ──
 function openIncidentModal(){const now=new Date();document.getElementById('incDate').value=now.toISOString().slice(0,10);document.getElementById('incTime').value=now.toTimeString().slice(0,5);openModal('incidentModal');applyDrafts(['incDesc','incAction','incFollowup'],'incDraftBanner');}
 async function loadIncidents(){const el=document.getElementById('incidentList');el.innerHTML='<div class="spinner"></div>';const data=await api('GET','/incidents')||[];const catLabel={fall:'転倒・転落',medication:'服薬ミス',choking:'誤嚥・窒息',complaint:'苦情',other:'その他'};const levColor={hiyari:'tag-amber','1':'tag-amber','2':'tag-red'};const levLabel={hiyari:'ヒヤリ','1':'事故Lv1','2':'事故Lv2'};el.innerHTML=data.length?data.map(i=>`<div class="card mb-2"><div class="flex justify-between mb-1"><div><span class="tag ${levColor[i.level]} mr-1">${levLabel[i.level]}</span><span class="font-bold text-sm">${catLabel[i.category]||i.category}</span></div><span class="text-xs text-gray-400">${i.incident_date} ${i.incident_time}</span></div>${i.client_name?`<div class="text-xs text-gray-500 mb-1">対象:${i.client_name}</div>`:''}<div class="text-sm text-gray-700">${i.description}</div>${i.action_taken?`<div class="text-xs text-gray-500 mt-1">対応:${i.action_taken}</div>`:''}</div>`).join(''):'<p class="text-gray-400 text-center py-4">記録なし</p>';}
-async function submitIncident(){const body={client_id:parseInt(document.getElementById('incClient').value)||null,incident_date:document.getElementById('incDate').value,incident_time:document.getElementById('incTime').value,helper_name:document.getElementById('incHelper').value.trim(),category:document.getElementById('incCategory').value,level:document.getElementById('incLevel').value,description:document.getElementById('incDesc').value.trim(),action_taken:document.getElementById('incAction').value.trim(),followup:document.getElementById('incFollowup').value.trim()};if(!body.description){alert('状況を入力してください');return;}await api('POST','/incidents',body);clearDrafts(['incDesc','incAction','incFollowup']);closeModal('incidentModal');loadIncidents();}
+async function submitIncident(){const body={client_id:parseInt(document.getElementById('incClient').value)||null,incident_date:document.getElementById('incDate').value,incident_time:document.getElementById('incTime').value,helper_name:document.getElementById('incHelper').value.trim(),category:document.getElementById('incCategory').value,level:document.getElementById('incLevel').value,description:document.getElementById('incDesc').value.trim(),action_taken:document.getElementById('incAction').value.trim(),followup:document.getElementById('incFollowup').value.trim()};if(!body.description){alert('状況を入力してください');return;}await api('POST','/incidents',body);clearDrafts(['incDesc','incAction','incFollowup']);checkPendingDrafts();closeModal('incidentModal');loadIncidents();}
 
 // ── AI summary ──
 async function generateAiSummary(){const btn=document.getElementById('aiSummaryBtn');btn.textContent='⏳ 生成中...';btn.disabled=true;try{const d=await api('POST','/ai/daily-summary');if(!d)throw new Error();document.getElementById('aiSummaryText').textContent=d.summary;document.getElementById('aiSummaryBanner').classList.remove('hidden');}catch(e){alert(e?.detail||'AI生成に失敗しました。本日の訪問記録（チェックアウト済み）が必要です。');}finally{btn.textContent='✨ AI日報生成';btn.disabled=false;}}
@@ -1044,7 +1063,7 @@ async function submitHandover() {
   const content = document.getElementById('hdContent').value.trim();
   if(!sender || !content) { alert('送信者名と内容を入力してください'); return; }
   await api('POST', '/handovers', {sender_name:sender, content, category:document.getElementById('hdCategory').value});
-  clearDrafts(['hdContent']); closeModal('handoverModal'); loadHandovers(); loadDashboard();
+  clearDrafts(['hdContent']); checkPendingDrafts(); closeModal('handoverModal'); loadHandovers(); loadDashboard();
 }
 
 // ── care plans ──
@@ -1073,7 +1092,7 @@ async function openCarePlanModal(cp=null) {
 }
 async function submitCarePlan() {
   const body = {client_id:parseInt(document.getElementById('cpClient').value),plan_created:document.getElementById('cpCreated').value,careplan_updated:document.getElementById('cpUpdated').value,next_review:document.getElementById('cpReview').value,goals:document.getElementById('cpGoals').value.trim(),notes:document.getElementById('cpNotes').value.trim()};
-  await api('POST','/care-plans',body); clearDrafts(['cpGoals','cpNotes']); closeModal('carePlanModal'); loadCarePlans();
+  await api('POST','/care-plans',body); clearDrafts(['cpGoals','cpNotes']); checkPendingDrafts(); closeModal('carePlanModal'); loadCarePlans();
 }
 
 // ── trainings ──
@@ -1110,7 +1129,7 @@ async function submitTraining() {
   const name = document.getElementById('trHelperName').value.trim();
   if(!name) { alert('ヘルパー名を入力してください'); return; }
   await api('POST','/trainings',{helper_name:name,training_type:document.getElementById('trType').value,plan_date:document.getElementById('trPlanDate').value,content:document.getElementById('trContent').value.trim()});
-  clearDrafts(['trContent']); closeModal('trainingModal'); loadTrainings();
+  clearDrafts(['trContent']); checkPendingDrafts(); closeModal('trainingModal'); loadTrainings();
 }
 async function completeTraining(id) { await api('PUT',`/trainings/${id}/complete`); loadTrainings(); }
 
@@ -1139,13 +1158,50 @@ async function submitMeeting() {
   const date = document.getElementById('mtDate').value;
   if(!date) { alert('開催日を入力してください'); return; }
   await api('POST','/meetings',{meeting_date:date,attendees:document.getElementById('mtAttendees').value.trim(),agenda:document.getElementById('mtAgenda').value.trim(),minutes:document.getElementById('mtMinutes').value.trim()});
-  clearDrafts(['mtMinutes']); closeModal('meetingModal'); loadMeetings();
+  clearDrafts(['mtMinutes']); checkPendingDrafts(); closeModal('meetingModal'); loadMeetings();
 }
 
 if(token) startApp();
 else document.getElementById('loginScreen').classList.remove('hidden');
 
 // ── 自動保存ユーティリティ ───────────────────────────────────────────────
+// ── 一次保存・下書きアラート ──────────────────────────────────────────────────
+const _HOUMON_DRAFT_MAP = [
+  {keys:['msgContent'],                       label:'💬 メッセージ',   action:"showPage('messages')"},
+  {keys:['incDesc','incAction','incFollowup'],label:'⚠️ ヒヤリハット', action:"openIncidentModal()"},
+  {keys:['hdContent'],                        label:'📋 申し送り',     action:"openHandoverModal()"},
+  {keys:['cpGoals','cpNotes'],                label:'📄 ケアプラン',    action:"openCarePlanModal()"},
+  {keys:['trContent'],                        label:'🎓 研修記録',     action:"openTrainingModal()"},
+  {keys:['mtMinutes'],                        label:'📝 定期会議',     action:"openMeetingModal()"},
+];
+function checkPendingDrafts(){
+  const NS='houmon_draft_';
+  const pending=[];
+  _HOUMON_DRAFT_MAP.forEach(function(item){
+    const has=item.keys.some(function(k){try{const d=JSON.parse(localStorage.getItem(NS+k)||'null');return !!(d&&d.v);}catch(e){return false;}});
+    if(has) pending.push(item);
+  });
+  const banner=document.getElementById('pendingDraftsBanner');
+  if(!banner) return;
+  if(pending.length===0){banner.style.display='none';return;}
+  banner.innerHTML='<div style="font-weight:700;margin-bottom:8px;font-size:14px">✏️ 未送信の下書き '+pending.length+' 件</div>'+
+    pending.map(function(p){return '<button onclick="'+p.action+'" style="background:#fff;border:1.5px solid #d97706;color:#92400e;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;margin:3px;display:inline-block">'+p.label+'</button>';}).join('')+
+    '<div style="font-size:11px;margin-top:6px;opacity:.8">タップして続きを入力してください</div>';
+  banner.style.display='block';
+}
+function savePageDraft(fields){
+  const NS='houmon_draft_';
+  fields.forEach(function(id){const el=document.getElementById(id);if(el){localStorage.setItem(NS+id,JSON.stringify({v:el.value,t:new Date().toLocaleString('ja-JP')}));}});
+  showDraftToast(); checkPendingDrafts();
+}
+function saveModalDraft(fields,modalId){savePageDraft(fields);closeModal(modalId);}
+function showDraftToast(){
+  let el=document.getElementById('_draftToast');
+  if(!el){el=document.createElement('div');el.id='_draftToast';el.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#059669;color:#fff;padding:8px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap';document.body.appendChild(el);}
+  el.textContent='💾 一次保存しました';el.style.opacity='1';
+  clearTimeout(el._t);el._t=setTimeout(function(){el.style.opacity='0';},2000);
+}
+// ────────────────────────────────────────────────────────────────────────────
 (function(){
   const NS='houmon_draft_';
   document.addEventListener('input',function(e){

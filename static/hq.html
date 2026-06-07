@@ -95,10 +95,9 @@ label{font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:3
       <div id="pane-incidents" class="hidden">
         <div class="section-title">⚠️ インシデント横断一覧</div>
         <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-          <select id="incOffice" style="flex:1;min-width:120px"><option value="">全事業所</option></select>
-          <select id="incYear" style="width:90px"></select>
-          <select id="incMonth" style="width:70px"></select>
-          <button class="btn btn-primary btn-sm" onclick="loadIncidents()">表示</button>
+          <select id="incOffice" style="flex:1;min-width:120px" onchange="loadIncidents()"><option value="">全事業所</option></select>
+          <select id="incYear" style="width:90px" onchange="loadIncidents()"></select>
+          <select id="incMonth" style="width:70px" onchange="loadIncidents()"></select>
         </div>
         <div id="incidentList"></div>
       </div>
@@ -114,7 +113,7 @@ label{font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:3
         <div style="background:#f0fdf4;border-radius:10px;padding:12px;margin-bottom:12px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
             <span style="font-size:13px;font-weight:700;color:#15803d">達成率</span>
-            <span id="checkProgress" style="font-size:13px;font-weight:700;color:#15803d">0/20</span>
+            <span id="checkProgress" style="font-size:13px;font-weight:700;color:#15803d">0/33</span>
           </div>
           <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
         </div>
@@ -132,7 +131,11 @@ label{font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:3
             <div class="form-row" style="margin:0"><label>講師・担当</label><input type="text" id="trainLecturer" placeholder="担当者名"></div>
           </div>
           <div class="form-row" style="margin-top:8px"><label>メモ・備考</label><textarea id="trainNote" rows="2" placeholder="内容・気づき等"></textarea></div>
-          <button class="btn btn-primary btn-sm" onclick="addTraining()">記録する</button>
+          <div id="trainDraftBanner" style="display:none;background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:6px 10px;font-size:12px;color:#92400e;margin-bottom:8px">💾 一次保存中のデータがあります</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-outline btn-sm" onclick="saveTrainingDraft()">💾 一次保存</button>
+            <button class="btn btn-primary btn-sm" onclick="addTraining()">✅ 入力完了</button>
+          </div>
         </div>
         <div class="section-title">📅 年間研修カレンダー（法定）</div>
         <div id="annualTrainings" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px"></div>
@@ -142,8 +145,47 @@ label{font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:3
 
       <div id="pane-settings" class="hidden">
         <div class="section-title">⚙️ 設定</div>
-        <div class="card"><div style="font-weight:700;margin-bottom:8px">🏢 アクセス可能な事業所</div><div id="accessList" style="font-size:13px;color:#6b7280"></div></div>
-        <div class="card" style="background:#f0f9ff;border:1.5px solid #bae6fd"><div style="font-size:13px;color:#0e7490">チェックリスト・研修記録はこのブラウザのみに保存されます（LocalStorage）。別端末では同期されません。</div></div>
+
+        <!-- アクセス可能な事業所 -->
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:8px">🏢 アクセス可能な事業所</div>
+          <div id="accessList" style="font-size:13px;color:#6b7280"></div>
+        </div>
+
+        <!-- SMTP・月次レポート -->
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:12px">📧 月次レポートメール設定</div>
+          <div class="form-row"><label>SMTPサーバー</label><input type="text" id="smtpHost" placeholder="smtp.gmail.com"></div>
+          <div class="form-row"><label>ポート番号</label><input type="number" id="smtpPort" placeholder="587" value="587"></div>
+          <div class="form-row"><label>送信メールアドレス</label><input type="email" id="smtpUser" placeholder="your@gmail.com"></div>
+          <div class="form-row"><label>パスワード（アプリパスワード）</label><input type="password" id="smtpPass" placeholder="••••••••••••"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+            <button class="btn btn-primary btn-sm" onclick="saveSmtp()">💾 SMTP設定を保存</button>
+            <button class="btn btn-outline btn-sm" onclick="sendReport()">📤 今月のレポートを送信</button>
+          </div>
+          <div id="smtpMsg" style="display:none;margin-top:8px;font-size:12px;padding:6px 10px;border-radius:6px"></div>
+        </div>
+
+        <!-- パスワード変更 -->
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:12px">🔑 パスワード変更</div>
+          <div class="form-row"><label>現在のパスワード</label><input type="password" id="curPass" placeholder="現在のパスワード"></div>
+          <div class="form-row"><label>新しいパスワード</label><input type="password" id="newPass" placeholder="新しいパスワード（6文字以上）"></div>
+          <div class="form-row"><label>新しいパスワード（確認）</label><input type="password" id="newPass2" placeholder="もう一度入力"></div>
+          <button class="btn btn-primary btn-sm" onclick="changePassword()" style="margin-top:4px">変更する</button>
+          <div id="passMsg" style="display:none;margin-top:8px;font-size:12px;padding:6px 10px;border-radius:6px"></div>
+        </div>
+
+        <!-- ログアウト -->
+        <div class="card" style="background:#fff5f5;border:1.5px solid #fecaca">
+          <div style="font-weight:700;margin-bottom:8px;color:#991b1b">🚪 ログアウト</div>
+          <p style="font-size:12px;color:#6b7280;margin-bottom:10px">ログアウトするとトークンが削除され、再度ログインが必要になります。</p>
+          <button class="btn btn-sm" style="background:#dc2626;color:#fff" onclick="doLogout()">ログアウト</button>
+        </div>
+
+        <div class="card" style="background:#f0f9ff;border:1.5px solid #bae6fd">
+          <div style="font-size:13px;color:#0e7490">チェックリスト・研修記録はこのブラウザのみに保存されます（LocalStorage）。別端末では同期されません。</div>
+        </div>
       </div>
     </div>
   </div>
@@ -163,26 +205,39 @@ let hqToken=localStorage.getItem(STORE+'_token')||'';
 let offices=[];
 
 const CHECKLIST=[
-  {id:"plan1",text:"居宅サービス計画（ケアプラン）の写しを保管している"},
-  {id:"plan2",text:"訪問介護計画書を全利用者分作成・署名を取得している"},
-  {id:"plan3",text:"訪問介護計画のモニタリングを定期的に実施している"},
-  {id:"staff1",text:"サービス提供責任者（サ責）の配置比率（利用者40:1）を満たしている"},
-  {id:"staff2",text:"ヘルパーの資格証（介護福祉士・初任者研修等）を保管している"},
-  {id:"staff3",text:"常勤換算数が人員配置基準を満たしている"},
-  {id:"record1",text:"訪問介護記録（実施内容・時間・担当者）を毎回作成している"},
-  {id:"record2",text:"サービス提供時間が計画書と一致している"},
-  {id:"record3",text:"利用者署名（または確認）のある提供票・実績票を保管している"},
-  {id:"record4",text:"利用者への法定代理受領通知書を毎月交付している"},
-  {id:"contract1",text:"重要事項説明書への署名をサービス開始前に取得している"},
-  {id:"safety1",text:"ヘルパーへの安全運転指導・交通事故防止の取り組みがある"},
-  {id:"safety2",text:"緊急時の連絡体制（利用者・家族・医師・サ責）を整備している"},
-  {id:"safety3",text:"虐待防止委員会を年2回以上開催し記録を保管している"},
-  {id:"safety4",text:"感染症対策研修を年1回以上実施し記録がある"},
-  {id:"bcp1",text:"BCP（業務継続計画）を策定・年次更新している"},
-  {id:"report1",text:"事故発生時に行政への報告書を速やかに提出している"},
-  {id:"report2",text:"障害福祉サービス等情報公表の年次報告を完了している"},
-  {id:"kazan1",text:"処遇改善加算の体制届・実績報告を期限内に提出している"},
-  {id:"kazan2",text:"特定事業所加算の算定要件（資格・研修）を継続確認している"},
+  {id:"A01",cat:"人員基準",text:"管理者は常勤かつ専従で配置されており、兼務する場合は同一敷地内に限られている"},
+  {id:"A02",cat:"人員基準",text:"サービス提供責任者（サ責）は実務者研修修了者以上の資格者で、利用者40名ごとに1名以上配置している"},
+  {id:"A03",cat:"人員基準",text:"訪問介護員の常勤換算数が2.5名以上であり、毎月勤務形態一覧表で算出・記録している"},
+  {id:"A04",cat:"人員基準",text:"全訪問介護員の資格証（介護福祉士・実務者研修・初任者研修等）の写しを保管し、資格有効性を確認している"},
+  {id:"A05",cat:"人員基準",text:"医療・福祉資格を持たない訪問介護員に認知症介護基礎研修を受講させている（2024年4月義務化）"},
+  {id:"B01",cat:"設備基準",text:"事業所に事務室・相談スペースを確保し、個人情報書類を収納する鍵付き書庫を設置している"},
+  {id:"B02",cat:"設備基準",text:"運営規程・重要事項説明書・料金表を事業所の見やすい場所に掲示または電子掲示している"},
+  {id:"C01",cat:"契約・説明",text:"重要事項説明書をサービス開始前に交付し、利用者または家族から署名・同意を取得している"},
+  {id:"C02",cat:"契約・説明",text:"利用契約書を締結し、個人情報の利用・提供に関する同意書も別途取得している"},
+  {id:"C03",cat:"契約・説明",text:"サービス開始時に被保険者証で要介護認定区分・認定有効期限を確認し記録を保管している"},
+  {id:"C04",cat:"契約・説明",text:"運営規程に必須8項目（目的・方針・職員・営業日時・サービス内容・実施地域・緊急時対応・虐待防止等）を記載している"},
+  {id:"C05",cat:"契約・説明",text:"毎月、法定代理受領通知書（給付費通知）を利用者に交付している"},
+  {id:"D01",cat:"計画・アセスメント",text:"居宅サービス計画（ケアプラン）の写しを全利用者分保管し、計画に基づいた訪問介護計画書を作成している"},
+  {id:"D02",cat:"計画・アセスメント",text:"訪問介護計画書はサ責がアセスメントを踏まえて作成し、利用者・家族の署名・同意を取得して写しを交付している"},
+  {id:"D03",cat:"計画・アセスメント",text:"サービス担当者会議（ケアマネ主催）に参加し、会議記録を保管している"},
+  {id:"D04",cat:"計画・アセスメント",text:"訪問介護計画のモニタリングを定期的に実施し、ケアプラン変更時は計画書を速やかに更新している"},
+  {id:"E01",cat:"サービス記録・請求",text:"サービス提供記録は毎回、実施内容・開始〜終了時刻・利用者の状態・担当者名を記載し利用者の確認を得ている"},
+  {id:"E02",cat:"サービス記録・請求",text:"サービス提供時間がケアプラン・訪問介護計画書と一致しており、計画外のサービスを請求していない"},
+  {id:"E03",cat:"サービス記録・請求",text:"毎月の提供票・実績票を作成し、利用者の確認署名または同等の確認を得て保管している"},
+  {id:"E04",cat:"サービス記録・請求",text:"介護給付費明細書の請求内容（サービスコード・単位数・時間）と実績記録が一致していることを請求前に確認している"},
+  {id:"E05",cat:"サービス記録・請求",text:"利用者負担金の領収書（明細付き）を毎月発行している"},
+  {id:"E06",cat:"サービス記録・請求",text:"全記録書類（サービス提供記録・契約書・苦情・事故記録等）をサービス提供日から5年間保存している"},
+  {id:"F01",cat:"安全・リスク管理",text:"緊急時の連絡体制（利用者・家族・主治医・ケアマネ・サ責）を全ヘルパーに周知し、連絡先一覧を携行させている"},
+  {id:"F02",cat:"安全・リスク管理",text:"事故発生時に利用者・家族への報告・応急処置・市区町村への報告を行い、原因分析と再発防止策を記録している"},
+  {id:"F03",cat:"安全・リスク管理",text:"ヒヤリハット記録を収集・集計し、定期的な安全対策の検討と職員への周知を行っている"},
+  {id:"F04",cat:"安全・リスク管理",text:"虐待防止委員会を年2回以上開催し、虐待防止指針・担当者配置・職員研修（年1回以上）を実施し記録を保管している（2024年度完全義務化）"},
+  {id:"F05",cat:"安全・リスク管理",text:"身体拘束廃止に関する委員会開催・指針整備・研修（年1回以上）を実施し、やむを得ない拘束は3要件確認・記録・家族説明を行っている（未実施は減算対象）"},
+  {id:"F06",cat:"安全・リスク管理",text:"利用者・家族等によるハラスメント防止方針を策定し、相談窓口を設置・職員に周知している（2024年度義務化）"},
+  {id:"F07",cat:"安全・リスク管理",text:"感染症対策委員会を年2回以上開催し、感染症対策指針・研修（年1回以上）・訓練（年1回以上）を実施し記録を保管している"},
+  {id:"F08",cat:"安全・リスク管理",text:"BCPを感染症・自然災害それぞれについて策定し、年1回以上の研修・訓練を実施して記録している（2024年度完全義務化）"},
+  {id:"G01",cat:"加算・届出管理",text:"処遇改善加算・特定処遇改善加算・ベースアップ等支援加算の体制届を期限内に提出し、加算額が職員賃金に適切に反映されていることを賃金台帳で確認している"},
+  {id:"G02",cat:"加算・届出管理",text:"特定事業所加算の算定要件（サ責資格・常勤専従割合・月1回以上の定期会議議事録・全職員への個別研修計画・緊急時受入実績等）を充足し証跡を保管している"},
+  {id:"G03",cat:"加算・届出管理",text:"介護サービス情報の公表（年1回の報告）および処遇改善加算等の実績報告書を法定期限内に提出している"},
 ];
 const ANNUAL_TRAININGS=[
   {name:"虐待防止研修",freq:"年2回",color:"#fee2e2",tc:"#991b1b"},
@@ -237,31 +292,31 @@ async function startApp(){
 async function loadDashboard(){
   const d=await api('GET','/hq/dashboard'); if(!d) return;
   document.getElementById('dashDate').textContent='集計日: '+d.today;
-  offices=d.offices;
-  const total=offices.reduce((a,o)=>({c:a.c+(o.users||0),v:a.v+(o.today_visits||o.present||0),al:a.al+(o.plan_alert||0)}),{c:0,v:0,al:0});
+  offices=d.offices||[];
+  const total=offices.reduce((a,o)=>({c:a.c+(o.clients||0),v:a.v+(o.done||0),al:a.al+(o.urgent_msg||0)}),{c:0,v:0,al:0});
   document.getElementById('summaryGrid').innerHTML=`
     <div class="stat-box"><div class="stat-num" style="color:var(--g)">${offices.length}</div><div class="stat-label">管理事業所数</div></div>
     <div class="stat-box"><div class="stat-num" style="color:var(--g)">${total.c}</div><div class="stat-label">総利用者数</div></div>
-    <div class="stat-box"><div class="stat-num" style="color:${total.v>0?'var(--g)':'#9ca3af'}">${total.v}</div><div class="stat-label">本日訪問件数</div></div>
-    <div class="stat-box"><div class="stat-num" style="color:${total.al>0?'#d97706':'#9ca3af'}">${total.al}</div><div class="stat-label">計画書要確認</div></div>`;
+    <div class="stat-box"><div class="stat-num" style="color:${total.v>0?'var(--g)':'#9ca3af'}">${total.v}</div><div class="stat-label">本日訪問完了</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:${total.al>0?'#d97706':'#9ca3af'}">${total.al}</div><div class="stat-label">緊急連絡あり</div></div>`;
   ['incOffice','visitOffice'].forEach(id=>{
     const sel=document.getElementById(id); sel.innerHTML='<option value="">全事業所</option>';
     offices.forEach(o=>{const op=document.createElement('option');op.value=o.office_id;op.textContent=o.office_name;sel.appendChild(op);});
   });
   document.getElementById('accessList').innerHTML=offices.map(o=>`<div style="padding:4px 0;border-bottom:1px solid #f3f4f6">✓ ${o.office_name}</div>`).join('');
   document.getElementById('officeList').innerHTML=offices.map(o=>`
-    <div class="office-card" style="border-color:${(o.plan_alert||0)>0?'#d97706':(o.incidents_month||0)>0?'#dc2626':'var(--g)'}">
+    <div class="office-card" style="border-color:${(o.urgent_msg||0)>0?'#d97706':(o.incidents_month||0)>0?'#dc2626':'var(--g)'}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;gap:6px">
         <div style="font-weight:700;font-size:14px">${o.office_name}</div>
         <div style="display:flex;gap:5px;flex-wrap:wrap">
-          ${(o.plan_alert||0)>0?`<span class="tag" style="background:#fef3c7;color:#92400e">⚠️ 計画書 ${o.plan_alert}件</span>`:''}
+          ${(o.urgent_msg||0)>0?`<span class="tag" style="background:#fef3c7;color:#92400e">⚠️ 緊急連絡 ${o.urgent_msg}件</span>`:''}
           ${(o.incidents_month||0)>0?`<span class="tag" style="background:#fee2e2;color:#991b1b">🚨 インシデント ${o.incidents_month}件</span>`:''}
         </div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-        <div class="stat-box"><div class="stat-num" style="color:var(--g)">${o.users||0}</div><div class="stat-label">利用者数</div></div>
-        <div class="stat-box"><div class="stat-num" style="color:${(o.today_visits||o.present||0)>0?'var(--g)':'#9ca3af'}">${o.today_visits||o.present||0}</div><div class="stat-label">本日訪問</div></div>
-        <div class="stat-box"><div class="stat-num" style="color:${(o.plan_alert||0)>0?'#d97706':'#9ca3af'}">${o.plan_alert||0}</div><div class="stat-label">計画書要確認</div></div>
+        <div class="stat-box"><div class="stat-num" style="color:var(--g)">${o.clients||0}</div><div class="stat-label">利用者数</div></div>
+        <div class="stat-box"><div class="stat-num" style="color:${(o.done||0)>0?'var(--g)':'#9ca3af'}">${o.done||0}</div><div class="stat-label">本日訪問完了</div></div>
+        <div class="stat-box"><div class="stat-num" style="color:${(o.incidents_month||0)>0?'#dc2626':'#9ca3af'}">${o.incidents_month||0}</div><div class="stat-label">今月事案</div></div>
       </div>
     </div>`).join('')||'<p style="text-align:center;color:#9ca3af;padding:30px">事業所が登録されていません</p>';
 }
@@ -273,18 +328,18 @@ async function loadVisits(){
   const date=document.getElementById('visitDate').value;
   const params=new URLSearchParams(); if(oid) params.set('office_id',oid); if(date) params.set('date',date);
   const data=await api('GET',`/hq/today-visits?${params}`)||[];
-  const statusLabel={completed:'完了',in_progress:'訪問中',scheduled:'予定',cancelled:'キャンセル'};
-  const statusColor={completed:'#f0fdf4',in_progress:'#fef9c3',scheduled:'#f0f9ff',cancelled:'#fafafa'};
+  const statusLabel={completed:'完了',in_progress:'訪問中',planned:'予定',scheduled:'予定',cancelled:'キャンセル'};
+  const statusColor={completed:'#f0fdf4',in_progress:'#fef9c3',planned:'#f0f9ff',scheduled:'#f0f9ff',cancelled:'#fafafa'};
   el.innerHTML=data.length?`<div style="font-size:12px;color:#6b7280;margin-bottom:8px">計 ${data.length}件</div>`+
     data.map(v=>`<div class="card" style="padding:12px;margin-bottom:6px;border-left:4px solid ${v.status==='completed'?'var(--g)':v.status==='in_progress'?'#d97706':'#9ca3af'}">
       <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;margin-bottom:4px">
         <div style="display:flex;align-items:center;gap:6px">
           <span class="tag" style="background:${statusColor[v.status]||'#f9fafb'};color:#374151">${statusLabel[v.status]||v.status}</span>
-          <span style="font-weight:700;font-size:13px">${v.user_name||''}さん</span>
+          <span style="font-weight:700;font-size:13px">${v.client_name||''}さん</span>
         </div>
-        <div style="font-size:11px;color:#9ca3af">${v.office_name||''} ｜ ${v.scheduled_start||''} 〜 ${v.scheduled_end||''}</div>
+        <div style="font-size:11px;color:#9ca3af">${v.office_name||''} ｜ ${v.start_time||''} 〜 ${v.end_time||''}</div>
       </div>
-      <div style="font-size:12px;color:#6b7280">担当: ${v.helper_name||v.staff_name||'—'} ${v.services||v.services_done?'｜ '+（v.services||v.services_done):''}  </div>
+      <div style="font-size:12px;color:#6b7280">担当: ${v.helper_name||'—'} ${v.service_type?'｜ '+v.service_type:''}</div>
     </div>`).join(''):'<p style="text-align:center;color:#9ca3af;padding:20px">この日の訪問記録はありません</p>';
 }
 
@@ -312,11 +367,21 @@ async function loadIncidents(){
 
 function initChecklist(){
   const saved=JSON.parse(localStorage.getItem(STORE+'_checklist')||'{}');
-  document.getElementById('checklistItems').innerHTML=CHECKLIST.map(item=>`
-    <div class="check-item ${saved[item.id]?'done':''}" id="ci-${item.id}" onclick="toggleCheck('${item.id}')">
-      <div class="check-cb ${saved[item.id]?'checked':''}" id="cb-${item.id}">${saved[item.id]?'✓':''}</div>
-      <div style="font-size:13px;color:#374151">${item.text}</div>
-    </div>`).join('');
+  const cats=[...new Set(CHECKLIST.map(i=>i.cat))];
+  document.getElementById('checklistItems').innerHTML=cats.map(cat=>{
+    const items=CHECKLIST.filter(i=>i.cat===cat);
+    const doneCount=items.filter(i=>saved[i.id]).length;
+    return `<div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:#0891b2;letter-spacing:.05em;padding:4px 8px;background:#e0f2fe;border-radius:6px;margin-bottom:6px;display:flex;justify-content:space-between">
+        <span>${cat}</span><span data-cat="${cat}">${doneCount}/${items.length}</span>
+      </div>
+      ${items.map(item=>`
+      <div class="check-item ${saved[item.id]?'done':''}" id="ci-${item.id}" onclick="toggleCheck('${item.id}')">
+        <div class="check-cb ${saved[item.id]?'checked':''}" id="cb-${item.id}">${saved[item.id]?'✓':''}</div>
+        <div style="font-size:13px;color:#374151">${item.text}</div>
+      </div>`).join('')}
+    </div>`;
+  }).join('');
   updateProgress();
 }
 function toggleCheck(id){
@@ -326,12 +391,21 @@ function toggleCheck(id){
   document.getElementById('ci-'+id).className='check-item'+(saved[id]?' done':'');
   const cb=document.getElementById('cb-'+id); cb.className='check-cb'+(saved[id]?' checked':''); cb.textContent=saved[id]?'✓':'';
   updateProgress();
+  updateCatCounters(saved);
+}
+function updateCatCounters(saved){
+  document.querySelectorAll('#checklistItems [data-cat]').forEach(el=>{
+    const cat=el.getAttribute('data-cat');
+    const items=CHECKLIST.filter(i=>i.cat===cat);
+    el.textContent=items.filter(i=>saved[i.id]).length+'/'+items.length;
+  });
 }
 function updateProgress(){
   const saved=JSON.parse(localStorage.getItem(STORE+'_checklist')||'{}');
   const done=CHECKLIST.filter(i=>saved[i.id]).length;
-  document.getElementById('checkProgress').textContent=`${done}/${CHECKLIST.length}`;
-  document.getElementById('progressFill').style.width=(done/CHECKLIST.length*100)+'%';
+  const total=CHECKLIST.length;
+  document.getElementById('checkProgress').textContent=`${done}/${total}`;
+  document.getElementById('progressFill').style.width=(done/total*100)+'%';
 }
 function resetChecklist(){if(confirm('チェックをリセットしますか？')){localStorage.removeItem(STORE+'_checklist');initChecklist();}}
 
@@ -345,12 +419,30 @@ function renderAnnualTrainings(){
     </div>`;
   }).join('');
 }
+function saveTrainingDraft(){
+  const d={type:document.getElementById('trainType').value,date:document.getElementById('trainDate').value,count:document.getElementById('trainCount').value,lecturer:document.getElementById('trainLecturer').value,note:document.getElementById('trainNote').value};
+  localStorage.setItem(STORE+'_train_draft',JSON.stringify(d));
+  document.getElementById('trainDraftBanner').style.display='block';
+  const b=document.getElementById('trainDraftBanner'); b.textContent='✅ 一次保存しました'; b.style.background='#d1fae5'; b.style.color='#065f46'; b.style.borderColor='#6ee7b7';
+  setTimeout(()=>{b.textContent='💾 一次保存中のデータがあります'; b.style.background='#fef3c7'; b.style.color='#92400e'; b.style.borderColor='#fcd34d';},2000);
+}
+function loadTrainingDraft(){
+  const d=JSON.parse(localStorage.getItem(STORE+'_train_draft')||'null'); if(!d) return;
+  if(d.type) document.getElementById('trainType').value=d.type;
+  if(d.date) document.getElementById('trainDate').value=d.date;
+  if(d.count) document.getElementById('trainCount').value=d.count;
+  if(d.lecturer) document.getElementById('trainLecturer').value=d.lecturer;
+  if(d.note) document.getElementById('trainNote').value=d.note;
+  document.getElementById('trainDraftBanner').style.display='block';
+}
 function addTraining(){
   const type=document.getElementById('trainType').value,date=document.getElementById('trainDate').value,count=document.getElementById('trainCount').value;
   if(!type||!date){alert('種別と日付は必須です');return;}
   const ts=JSON.parse(localStorage.getItem(STORE+'_trainings')||'[]');
   ts.unshift({id:Date.now(),type,date,count:count||'—',lecturer:document.getElementById('trainLecturer').value,note:document.getElementById('trainNote').value});
   localStorage.setItem(STORE+'_trainings',JSON.stringify(ts));
+  localStorage.removeItem(STORE+'_train_draft');
+  document.getElementById('trainDraftBanner').style.display='none';
   document.getElementById('trainType').value=''; document.getElementById('trainCount').value='';
   document.getElementById('trainLecturer').value=''; document.getElementById('trainNote').value='';
   renderTrainings(); renderAnnualTrainings();
@@ -375,6 +467,46 @@ function renderTrainings(){
     </div>`).join(''):'<p style="text-align:center;color:#9ca3af;padding:20px;font-size:13px">研修記録がありません</p>';
 }
 
+async function loadSettings(){
+  const d=await api('GET','/hq/me'); if(!d) return;
+  if(d.smtp_host) document.getElementById('smtpHost').value=d.smtp_host;
+  if(d.smtp_user) document.getElementById('smtpUser').value=d.smtp_user;
+}
+async function saveSmtp(){
+  const host=document.getElementById('smtpHost').value.trim();
+  const port=parseInt(document.getElementById('smtpPort').value)||587;
+  const user=document.getElementById('smtpUser').value.trim();
+  const pass=document.getElementById('smtpPass').value;
+  if(!host||!user||!pass){showSettingMsg('smtpMsg','SMTPサーバー・メールアドレス・パスワードは必須です','#fee2e2','#991b1b');return;}
+  try{await api('POST','/hq/smtp',{smtp_host:host,smtp_port:port,smtp_user:user,smtp_pass:pass});
+    showSettingMsg('smtpMsg','✅ SMTP設定を保存しました','#d1fae5','#065f46');}
+  catch(e){showSettingMsg('smtpMsg','❌ 保存に失敗しました','#fee2e2','#991b1b');}
+}
+async function sendReport(){
+  const btn=event.target; btn.disabled=true; btn.textContent='送信中...';
+  try{const d=await api('POST','/hq/send-report');
+    showSettingMsg('smtpMsg','✅ '+d.message,'#d1fae5','#065f46');}
+  catch(e){showSettingMsg('smtpMsg','❌ '+(e.detail||'送信失敗。SMTP設定を確認してください'),'#fee2e2','#991b1b');}
+  finally{btn.disabled=false; btn.textContent='📤 今月のレポートを送信';}
+}
+async function changePassword(){
+  const cur=document.getElementById('curPass').value;
+  const np=document.getElementById('newPass').value;
+  const np2=document.getElementById('newPass2').value;
+  if(!cur||!np||!np2){showSettingMsg('passMsg','全て入力してください','#fee2e2','#991b1b');return;}
+  if(np.length<6){showSettingMsg('passMsg','新しいパスワードは6文字以上にしてください','#fee2e2','#991b1b');return;}
+  if(np!==np2){showSettingMsg('passMsg','新しいパスワードが一致しません','#fee2e2','#991b1b');return;}
+  try{await api('POST','/hq/change-password',{current_password:cur,new_password:np});
+    showSettingMsg('passMsg','✅ パスワードを変更しました','#d1fae5','#065f46');
+    document.getElementById('curPass').value=''; document.getElementById('newPass').value=''; document.getElementById('newPass2').value='';}
+  catch(e){showSettingMsg('passMsg','❌ '+(e.detail||'変更に失敗しました'),'#fee2e2','#991b1b');}
+}
+function showSettingMsg(id,text,bg,color){
+  const el=document.getElementById(id);
+  el.textContent=text; el.style.display='block'; el.style.background=bg; el.style.color=color;
+  setTimeout(()=>el.style.display='none',4000);
+}
+
 function showPane(name){
   ['overview','visits','incidents','checklist','training','settings'].forEach(t=>{
     document.getElementById('pane-'+t).classList.toggle('hidden',t!==name);
@@ -383,6 +515,8 @@ function showPane(name){
   });
   if(name==='incidents') loadIncidents();
   if(name==='visits') loadVisits();
+  if(name==='training') loadTrainingDraft();
+  if(name==='settings') loadSettings();
 }
 
 (function init(){

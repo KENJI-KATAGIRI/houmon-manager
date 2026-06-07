@@ -750,6 +750,8 @@ class HqRegisterReq(BaseModel):
     username: str; org_name: str; email: str; password: str; office_ids: Optional[List[int]]=[]
 class HqSmtpReq(BaseModel):
     smtp_host: str; smtp_port: int; smtp_user: str; smtp_pass: str
+class HqChangePasswordReq(BaseModel):
+    current_password: str; new_password: str
 
 def make_hq_token(hq_id, username):
     exp = datetime.utcnow() + timedelta(days=30)
@@ -893,6 +895,17 @@ async def hq_send_report(hq_id: int = Depends(current_hq)):
             s.starttls(); s.login(hq["smtp_user"],hq["smtp_pass"]); s.send_message(msg)
         return {"ok":True,"message":f"{hq['email']}に送信しました"}
     except Exception as e: raise HTTPException(500, str(e)[:80])
+
+@app.post("/api/hq/change-password")
+async def hq_change_password(req: HqChangePasswordReq, hq_id: int = Depends(current_hq)):
+    db = get_db()
+    row = db.execute("SELECT * FROM hq_accounts WHERE id=?", (hq_id,)).fetchone()
+    if not row or hash_pw(req.current_password, row["pw_salt"]) != row["pw_hash"]:
+        db.close(); raise HTTPException(400, "現在のパスワードが正しくありません")
+    new_salt = secrets.token_hex(16)
+    db.execute("UPDATE hq_accounts SET pw_hash=?,pw_salt=? WHERE id=?",
+               (hash_pw(req.new_password, new_salt), new_salt, hq_id))
+    db.commit(); db.close(); return {"ok": True}
 
 # ── admin ─────────────────────────────────────────────────────
 ADMIN_KEY = "houmon-admin-2025"
