@@ -190,6 +190,15 @@ footer{background:#0f172a;color:#94a3b8;padding:36px 0;text-align:center;font-si
     <div class="section-tag"><span class="tag" style="background:var(--blue-light);color:var(--blue-dark)">現場の課題</span></div>
     <h2 class="section-title">訪問介護事業所が抱える<br>「見えないムダ」</h2>
     <p class="section-sub">ヘルパーも管理者も、本来の仕事以外のことに時間を使いすぎています。</p>
+    <div style="margin-bottom:28px;background:linear-gradient(135deg,#ecfeff,#cffafe);border:2px solid #67e8f9;border-radius:16px;padding:20px 24px">
+      <div style="display:flex;align-items:flex-start;gap:14px">
+        <div style="font-size:28px;flex-shrink:0">📌</div>
+        <div>
+          <div style="font-weight:900;font-size:15px;color:#0e7490;margin-bottom:6px">2024年4月 処遇改善加算が4区分に一本化 — 算定要件の記録管理が必須</div>
+          <div style="font-size:13px;color:#164e63;line-height:1.7">旧3種類（処遇改善・特定・ベースアップ）が「訪問介護処遇改善加算」に統合。最大<strong>24.5%の加算</strong>が狙えますが、算定要件となる研修記録・キャリアパス要件の書面管理が必要です。当システムの研修記録機能で対応できます。</div>
+        </div>
+      </div>
+    </div>
     <div class="pain-grid">
       <div class="pain-card">
         <div style="font-size:36px;margin-bottom:14px">📝</div>
@@ -300,6 +309,36 @@ footer{background:#0f172a;color:#94a3b8;padding:36px 0;text-align:center;font-si
       </div>
     </div>
 
+    <div class="feature-row rev">
+      <div>
+        <div class="feature-label">📋 サ責の計画管理</div>
+        <h3 class="feature-title">訪問介護計画書の<br>期限・更新を自動管理</h3>
+        <p class="feature-desc">サービス提供責任者が作成する「訪問介護計画書」の初回・変更履歴・6ヶ月毎モニタリング期限を管理。<strong>更新が近い利用者はアラートで通知</strong>し、計画未更新による返戻リスクを防ぎます。</p>
+        <div>
+          <div class="feature-point">計画書の有効期限・次回作成期日をダッシュボードで一覧管理</div>
+          <div class="feature-point">30日前から期限アラート→紙ではなくシステムが追跡</div>
+          <div class="feature-point">処遇改善加算のキャリアパス要件・研修記録も同一画面で管理</div>
+        </div>
+      </div>
+      <div class="feature-visual">
+        <div class="fv-title">📋 訪問介護計画書 管理</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="background:#fef3c7;border-left:4px solid #f59e0b;border-radius:0 10px 10px 0;padding:10px 12px">
+            <div style="font-size:12px;font-weight:700;color:#92400e">⚠️ 更新期限 15日後</div>
+            <div style="font-size:13px;color:#78350f;margin-top:2px">山田 花子 様｜計画書 次回更新 7/22</div>
+          </div>
+          <div style="background:#fee2e2;border-left:4px solid #ef4444;border-radius:0 10px 10px 0;padding:10px 12px">
+            <div style="font-size:12px;font-weight:700;color:#991b1b">🔴 期限超過</div>
+            <div style="font-size:13px;color:#7f1d1d;margin-top:2px">田中 一郎 様｜6ヶ月モニタリング未実施</div>
+          </div>
+          <div style="background:#f0fdf4;border-left:4px solid #22c55e;border-radius:0 10px 10px 0;padding:10px 12px">
+            <div style="font-size:12px;font-weight:700;color:#166534">✓ 処遇改善加算 研修要件</div>
+            <div style="font-size:13px;color:#14532d;margin-top:2px">今月の研修実施記録 3件 登録済み</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </section>
 
@@ -333,7 +372,6 @@ footer{background:#0f172a;color:#94a3b8;padding:36px 0;text-align:center;font-si
         </div>
         <div style="margin-top:24px">
           <a href="https://life-energy-coaching.net/houmon/hq/auto-login/" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:#fff;color:var(--blue);padding:14px 28px;border-radius:12px;font-weight:700;font-size:15px;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,.2)">🏢 本部ポータルを体験する（ログイン不要）</a>
-          <div style="font-size:12px;opacity:.6;margin-top:8px">デモアカウント: honbu / honbu2025</div>
         </div>
       </div>
       <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:20px">
@@ -392,15 +430,57 @@ footer{background:#0f172a;color:#94a3b8;padding:36px 0;text-align:center;font-si
           <tr><td class="feature-name">サービス内容チェックボックス入力</td><td class="our"><span class="check">✓</span></td><td><span class="tri">△</span></td><td><span class="check">✓</span></td><td><span class="cross">✗</span></td></tr>
           <tr><td class="feature-name">請求ソフト連携CSV出力</td><td class="our"><span class="check">✓</span></td><td><span class="tri">△</span></td><td><span class="cross">✗</span></td><td><span class="tri">△</span></td></tr>
           <tr><td class="feature-name">カスタマイズ対応</td><td class="our"><span class="check">✓</span></td><td><span class="cross">✗</span></td><td><span class="cross">✗</span></td><td><span class="cross">✗</span></td></tr>
+          <tr style="background:#f9fafb">
+            <td class="feature-name">導入支援・データ移行サポート</td>
+            <td class="our"><span style="font-size:13px;font-weight:700;color:var(--blue)">専任担当が伴走</span></td>
+            <td style="font-size:13px;color:#9ca3af">オプション</td>
+            <td style="font-size:13px;color:#9ca3af">セルフ</td>
+            <td style="font-size:13px;color:#dc2626">なし</td>
+          </tr>
+          <tr>
+            <td class="feature-name">御社専用カスタマイズ<br><span style="font-size:11px;font-weight:400;color:#9ca3af">帳票・入力項目・ワークフロー</span></td>
+            <td class="our"><span class="check">✓</span><br><span style="font-size:11px;color:var(--blue)">別途お見積もり</span></td>
+            <td><span class="cross">✗</span></td>
+            <td><span class="cross">✗</span></td>
+            <td><span class="cross">✗</span></td>
+          </tr>
           <tr style="background:#eff6ff">
-            <td class="feature-name" style="font-weight:800">月額（参考）</td>
-            <td style="color:var(--blue);font-weight:800;font-size:18px">¥9,800〜<br><span style="display:inline-block;background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700;margin-top:4px">最安水準</span></td>
-            <td style="font-size:13px">¥16,500</td>
-            <td style="font-size:13px">要問合せ</td>
-            <td style="font-size:13px">¥数万円〜</td>
+            <td class="feature-name">開発者への直接問い合わせ</td>
+            <td class="our"><span class="check">✓</span><br><span style="font-size:11px;color:var(--blue)">即日〜翌営業日対応</span></td>
+            <td style="font-size:13px;color:#9ca3af">コールセンター経由</td>
+            <td style="font-size:13px;color:#9ca3af">コールセンター経由</td>
+            <td style="font-size:13px;color:#9ca3af">フォームのみ</td>
           </tr>
         </tbody>
       </table>
+    <div style="margin-top:28px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:2px solid #86efac;border-radius:18px;padding:28px 28px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <div style="font-size:32px">🛠️</div>
+        <div>
+          <div style="font-weight:900;font-size:18px;color:#14532d">御社の業務フローに合わせて、フルカスタマイズできます</div>
+          <div style="font-size:13px;color:#166534;margin-top:2px">大手SaaSにはできない柔軟な対応が、このシステムの最大の強みです</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+        <div style="background:#fff;border-radius:12px;padding:14px">
+          <div style="font-size:20px;margin-bottom:6px">📄</div>
+          <div style="font-weight:700;font-size:13px;color:#15803d">帳票を自社書式に変更</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:4px">記録様式・報告書・契約書など既存フォーマットに合わせて対応</div>
+        </div>
+        <div style="background:#fff;border-radius:12px;padding:14px">
+          <div style="font-size:20px;margin-bottom:6px">⚙️</div>
+          <div style="font-weight:700;font-size:13px;color:#15803d">独自の入力項目・機能を追加</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:4px">現場で必要な項目・チェックリスト・ワークフローを個別に実装</div>
+        </div>
+        <div style="background:#fff;border-radius:12px;padding:14px">
+          <div style="font-size:20px;margin-bottom:6px">🔗</div>
+          <div style="font-weight:700;font-size:13px;color:#15803d">既存ソフト・システムとの連携</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:4px">請求ソフト・勤怠管理・グループウェアとのCSV・API連携</div>
+        </div>
+      </div>
+      <div style="margin-top:16px;text-align:center;font-size:13px;color:#15803d;font-weight:700">
+        💬 カスタム内容・費用感はお気軽にご相談ください ─ 開発者が直接ご回答します
+      </div>
     </div>
   </div>
 </section>
@@ -419,8 +499,8 @@ footer{background:#0f172a;color:#94a3b8;padding:36px 0;text-align:center;font-si
     <div class="scale-grid">
       <div style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:16px;padding:22px;text-align:center">
         <div style="font-size:13px;opacity:.7;margin-bottom:8px">小規模（1〜3事業所）</div>
-        <div style="font-size:22px;font-weight:900;color:#93c5fd">月9,800円〜</div>
-        <div style="font-size:12px;opacity:.7;margin-top:6px">まず1事業所から試せる<br>初期費用ゼロ</div>
+        <div style="font-size:18px;font-weight:900;color:#93c5fd">まずはご相談</div>
+        <div style="font-size:12px;opacity:.7;margin-top:6px">規模・要件に応じて<br>最適なプランをご提案</div>
       </div>
       <div style="background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.4);border-radius:16px;padding:22px;text-align:center">
         <div style="font-size:13px;color:#93c5fd;font-weight:700;margin-bottom:8px">▶ 中規模（4〜10事業所）</div>
