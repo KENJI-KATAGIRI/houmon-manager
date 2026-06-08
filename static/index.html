@@ -320,6 +320,9 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
       <button class="card text-center cursor-pointer" onclick="showPage('settings')">
         <div class="text-3xl mb-1">⚙️</div><div class="font-bold text-sm">設定</div>
       </button>
+      <button id="billingMenuBtn" class="hidden card text-center cursor-pointer" onclick="showPage('billing')" style="border:2px solid #0891b2">
+        <div class="text-3xl mb-1">💴</div><div class="font-bold text-sm" style="color:#0891b2">国保連請求</div>
+      </button>
       <button class="card text-center cursor-pointer col-span-2" style="background:linear-gradient(135deg,#0e7490,#0891b2);color:#fff;border:none" onclick="window.location.href='/houmon/hq/auto-login/'">
         <div class="text-3xl mb-1">🏢</div><div class="font-bold text-sm">本部ポータルへ</div>
       </button>
@@ -380,9 +383,98 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
       <div class="font-bold text-gray-700 mb-2">📋 プラン情報</div>
       <div id="planInfo" class="text-sm text-gray-600"></div>
     </div>
+    <div class="card mb-3">
+      <div class="font-bold text-gray-700 mb-2">💴 国保連請求モード</div>
+      <p class="text-xs text-gray-500 mb-3">有効にすると請求書類の作成・国保連CSV出力機能が使えます。</p>
+      <button id="toggleNewModeBtn" class="btn btn-outline w-full text-sm" onclick="toggleNewMode()">読み込み中...</button>
+    </div>
     <div class="card mb-3 bg-blue-50 border border-blue-200">
       <div class="font-bold text-blue-800 mb-1">お問い合わせ</div>
       <a href="mailto:kenji.kys@gmail.com" class="btn btn-primary mt-2 text-sm">メールで問い合わせる</a>
+    </div>
+  </div>
+
+  <!-- 国保連請求ページ -->
+  <div id="page-billing" class="page">
+    <div class="section-title">国保連請求</div>
+    <div class="flex gap-2 mb-4 overflow-x-auto">
+      <button id="bTabSettings" class="btn btn-primary text-sm px-3 py-2 whitespace-nowrap" onclick="showBillingTab('settings')">請求設定</button>
+      <button id="bTabJukyusha" class="btn btn-outline text-sm px-3 py-2 whitespace-nowrap" onclick="showBillingTab('jukyusha')">受給者証</button>
+      <button id="bTabKasan" class="btn btn-outline text-sm px-3 py-2 whitespace-nowrap" onclick="showBillingTab('kasan')">加算設定</button>
+      <button id="bTabCsv" class="btn btn-outline text-sm px-3 py-2 whitespace-nowrap" onclick="showBillingTab('csv')">CSV・請求書</button>
+    </div>
+    <div id="bPaneSettings">
+      <div class="card mb-3">
+        <div class="font-bold text-gray-700 mb-3">事業所情報</div>
+        <label>事業所番号（10桁）</label><input type="text" id="bJigyoshoNo" placeholder="0000000000" maxlength="10" class="mb-2">
+        <label>都道府県番号（2桁）</label><input type="text" id="bPrefNo" placeholder="例: 13（東京）" maxlength="2" class="mb-2">
+        <label>サービスコード（身体介護 デフォルト）</label><input type="text" id="bServiceCode" placeholder="111101" class="mb-2">
+        <label>サービスコード（家事援助 デフォルト）</label><input type="text" id="bServiceCodeLife" placeholder="112101" class="mb-2">
+        <div class="text-xs rounded p-2 mb-3" style="background:#eff6ff;color:#1d4ed8">
+          ※単位数は訪問時間から自動計算（身体: 30分未満256〜180分超921+ / 家事: 30分未満106〜90分超311+）<br>
+          CSVには時間区分ごとの正確なサービスコードが自動付与されます
+        </div>
+        <label>単価（円/100単位）</label><input type="number" id="bTankaUnit" placeholder="1140" class="mb-3">
+        <button class="btn btn-primary w-full" onclick="saveBillingSettings()">💾 保存</button>
+      </div>
+    </div>
+    <div id="bPaneJukyusha" class="hidden">
+      <div class="card mb-3 bg-blue-50 border border-blue-200">
+        <p class="text-xs text-blue-800">各利用者の受給者証番号・有効期限・支給量（上限回数）を登録します。</p>
+      </div>
+      <div id="jukyushaList"></div>
+    </div>
+    <div id="bPaneKasan" class="hidden">
+      <div class="card mb-3">
+        <div class="font-bold text-gray-700 mb-2">よく使う加算をプリセット追加</div>
+        <div class="grid grid-cols-2 gap-2">
+          <button class="btn btn-outline text-xs py-2" onclick="addKasanPreset('処遇改善加算I','116001',41.7)">処遇改善I (41.7%)</button>
+          <button class="btn btn-outline text-xs py-2" onclick="addKasanPreset('処遇改善加算II','116002',40.2)">処遇改善II (40.2%)</button>
+          <button class="btn btn-outline text-xs py-2" onclick="addKasanPreset('処遇改善加算III','116003',34.7)">処遇改善III (34.7%)</button>
+          <button class="btn btn-outline text-xs py-2" onclick="addKasanPreset('処遇改善加算IV','116004',27.3)">処遇改善IV (27.3%)</button>
+        </div>
+      </div>
+      <div class="card mb-3">
+        <div class="font-bold text-gray-700 mb-2">手動追加</div>
+        <label>加算コード</label><input type="text" id="newKasanCode" placeholder="例: 116001" class="mb-2">
+        <label>加算名</label><input type="text" id="newKasanName" placeholder="例: 処遇改善加算I" class="mb-2">
+        <label>加算率（%）</label><input type="number" id="newKasanRate" placeholder="例: 4.5" step="0.1" class="mb-3">
+        <button class="btn btn-primary w-full" onclick="addKasan()">追加</button>
+      </div>
+      <div id="kasanList"></div>
+    </div>
+    <div id="bPaneCsv" class="hidden">
+      <div class="card mb-3">
+        <div class="font-bold text-gray-700 mb-2">対象年月</div>
+        <div class="grid grid-cols-2 gap-2 mb-3">
+          <div><label>年</label><select id="bCsvYear"></select></div>
+          <div><label>月</label><select id="bCsvMonth">
+            <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option><option value="4">4月</option><option value="5">5月</option><option value="6">6月</option>
+            <option value="7">7月</option><option value="8">8月</option><option value="9">9月</option><option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
+          </select></div>
+        </div>
+        <button class="btn btn-outline w-full mb-2 text-sm" onclick="loadBillingPreview()">🔍 プレビュー確認</button>
+        <div id="billingPreview" class="hidden mb-3"></div>
+        <button class="btn btn-primary w-full mb-2" onclick="downloadBillingCsv()">📥 国保連CSV ダウンロード</button>
+        <button class="btn btn-outline w-full text-sm" onclick="openBillingInvoice()">🖨️ 利用者負担金請求書（印刷）</button>
+      </div>
+    </div>
+  </div>
+  <!-- 受給者証編集モーダル -->
+  <div id="jukyushaModal" class="modal">
+    <div class="modal-box">
+      <div class="font-bold text-lg mb-3">受給者証情報 編集</div>
+      <input type="hidden" id="jClientId">
+      <label>利用者名</label><input type="text" id="jClientName" readonly class="mb-2 bg-gray-50">
+      <label>受給者番号（10桁）</label><input type="text" id="jJukyushaNo" placeholder="0000000000" maxlength="10" class="mb-2">
+      <label>有効期間 開始</label><input type="date" id="jValidFrom" class="mb-2">
+      <label>有効期間 終了</label><input type="date" id="jValidTo" class="mb-2">
+      <label>支給量（上限回数/月）</label><input type="number" id="jShikyuVisits" placeholder="26" class="mb-2">
+      <label>利用者負担上限月額（円）</label><input type="number" id="jFutanJogen" placeholder="0" class="mb-3">
+      <div class="flex gap-2">
+        <button class="btn btn-outline flex-1" onclick="closeModal('jukyushaModal')">キャンセル</button>
+        <button class="btn btn-primary flex-1" onclick="saveJukyusha()">保存</button>
+      </div>
     </div>
   </div>
 
@@ -639,6 +731,7 @@ const API = '/houmon/api';
 let token = localStorage.getItem('houmon_token') || '';
 let officeName = localStorage.getItem('houmon_office') || '';
 let clients = [], helpers = [], msgPriority = 'normal';
+let newMode = 0;
 let currentVisitPlan = null;
 
 async function api(method, path, body) {
@@ -668,6 +761,7 @@ function showPage(name) {
   if(name==='careplans') loadCarePlans();
   if(name==='trainings') loadTrainings();
   if(name==='meetings') loadMeetings();
+  if(name==='billing'){showBillingTab('settings');loadBillingPage();}
 }
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
@@ -717,6 +811,11 @@ async function startApp() {
   document.getElementById('topOfficeName').textContent=officeName;
   const now=new Date();
   document.getElementById('topDate').textContent=now.toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
+  const me=await api('GET','/me');
+  if(me){
+    newMode=me.new_mode||0;
+    document.getElementById('billingMenuBtn')?.classList.toggle('hidden',!newMode);
+  }
   await loadClientsData();
   await loadHelpersData();
   loadDashboard();
@@ -1019,7 +1118,152 @@ function initExport(){const now=new Date();const sel=document.getElementById('ex
 async function downloadCsv(type='visit-records', label='訪問記録'){const y=document.getElementById('exportYear').value;const m=document.getElementById('exportMonth').value;const r=await fetch(`${API}/export/${type}?year=${y}&month=${m}`,{headers:{'Authorization':'Bearer '+token}});if(!r.ok){alert('データがありません');return;}const blob=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${label}_${y}年${String(m).padStart(2,'0')}月.csv`;a.click();}
 
 // ── settings ──
-async function loadSettings(){const me=await api('GET','/me');if(me){const planLabel={trial:'トライアル',standard:'スタンダード'};document.getElementById('planBadge').textContent=planLabel[me.plan]||me.plan;document.getElementById('planInfo').innerHTML=`<div>プラン: <strong>${planLabel[me.plan]||me.plan}</strong></div><div>ステータス: <strong>${me.subscription_status==='trial'?'無料トライアル中':'有効'}</strong></div>${me.trial_end?`<div class="text-gray-400 text-xs mt-1">トライアル終了: ${me.trial_end?.slice(0,10)}</div>`:''}`; }}
+async function loadSettings(){const me=await api('GET','/me');if(me){const planLabel={trial:'トライアル',standard:'スタンダード'};document.getElementById('planBadge')&&(document.getElementById('planBadge').textContent=planLabel[me.plan]||me.plan);document.getElementById('planInfo').innerHTML=`<div>プラン: <strong>${planLabel[me.plan]||me.plan}</strong></div><div>ステータス: <strong>${me.subscription_status==='trial'?'無料トライアル中':'有効'}</strong></div>${me.trial_end?`<div class="text-gray-400 text-xs mt-1">トライアル終了: ${me.trial_end?.slice(0,10)}</div>`:''}`;
+  newMode=me.new_mode||0;
+  const btn=document.getElementById('toggleNewModeBtn');
+  if(btn) btn.textContent=newMode?'✅ 国保連請求モード：有効（無効にする）':'💴 国保連請求モード：無効（有効にする）';
+  document.getElementById('billingMenuBtn')?.classList.toggle('hidden',!newMode);
+}}
+async function toggleNewMode(){
+  const s=await api('GET','/billing/settings');
+  if(!s) return;
+  newMode=newMode?0:1;
+  await api('PUT','/billing/settings',{...s,new_mode:newMode});
+  loadSettings();
+}
+function showBillingTab(tab){
+  ['Settings','Jukyusha','Kasan','Csv'].forEach(t=>{
+    document.getElementById('bPane'+t)?.classList.toggle('hidden',t.toLowerCase()!==tab);
+    document.getElementById('bTab'+t)?.classList.toggle('btn-primary',t.toLowerCase()===tab);
+    document.getElementById('bTab'+t)?.classList.toggle('btn-outline',t.toLowerCase()!==tab);
+  });
+  if(tab==='jukyusha') loadJukyusha();
+  if(tab==='kasan') loadKasan();
+  if(tab==='csv') initBillingCsv();
+}
+async function loadBillingPage(){
+  const s=await api('GET','/billing/settings');
+  if(!s) return;
+  document.getElementById('bJigyoshoNo').value=s.jigyosho_no||'';
+  document.getElementById('bPrefNo').value=s.pref_no||'';
+  document.getElementById('bServiceCode').value=s.service_code||'111101';
+  document.getElementById('bServiceCodeLife').value=s.service_code_life||'112101';
+  document.getElementById('bTankaUnit').value=s.tanka_unit||1140;
+}
+async function saveBillingSettings(){
+  await api('PUT','/billing/settings',{
+    jigyosho_no:document.getElementById('bJigyoshoNo').value.trim(),
+    pref_no:document.getElementById('bPrefNo').value.trim(),
+    service_code:document.getElementById('bServiceCode').value.trim()||'111101',
+    service_code_life:document.getElementById('bServiceCodeLife').value.trim()||'112101',
+    tanka_unit:parseInt(document.getElementById('bTankaUnit').value)||1140,
+    new_mode:newMode
+  });
+  alert('保存しました');
+}
+async function loadJukyusha(){
+  const rows=await api('GET','/billing/jukyusha')||[];
+  const el=document.getElementById('jukyushaList');
+  if(!rows.length){el.innerHTML='<p class="text-gray-400 text-sm text-center py-4">登録された利用者がいません</p>';return;}
+  el.innerHTML=rows.map(r=>`<div class="card mb-2">
+    <div class="flex justify-between items-center">
+      <div><span class="font-bold">${r.name}</span><span class="text-xs text-gray-500 ml-2">${r.kana||''}</span></div>
+      <button class="btn btn-outline text-xs px-2 py-1" onclick="openJukyushaModal(${JSON.stringify(r).replace(/"/g,'&quot;')})">編集</button>
+    </div>
+    <div class="text-xs text-gray-600 mt-1">受給者番号: ${r.jukyusha_no||'<span class=\'text-red-500 font-bold\'>未登録</span>'} ／ 有効期限: ${r.jukyusha_valid_to||'未設定'} ／ 支給量: ${r.shikyu_visits||26}回</div>
+  </div>`).join('');
+}
+function openJukyushaModal(r){
+  document.getElementById('jClientId').value=r.id;
+  document.getElementById('jClientName').value=r.name;
+  document.getElementById('jJukyushaNo').value=r.jukyusha_no||'';
+  document.getElementById('jValidFrom').value=r.jukyusha_valid_from||'';
+  document.getElementById('jValidTo').value=r.jukyusha_valid_to||'';
+  document.getElementById('jShikyuVisits').value=r.shikyu_visits||26;
+  document.getElementById('jFutanJogen').value=r.futan_jogen||0;
+  openModal('jukyushaModal');
+}
+async function saveJukyusha(){
+  const cid=document.getElementById('jClientId').value;
+  await api('PUT',`/billing/jukyusha/${cid}`,{
+    jukyusha_no:document.getElementById('jJukyushaNo').value.trim(),
+    jukyusha_valid_from:document.getElementById('jValidFrom').value,
+    jukyusha_valid_to:document.getElementById('jValidTo').value,
+    shikyu_visits:parseInt(document.getElementById('jShikyuVisits').value)||26,
+    futan_jogen:parseInt(document.getElementById('jFutanJogen').value)||0
+  });
+  closeModal('jukyushaModal'); loadJukyusha();
+}
+async function loadKasan(){
+  const rows=await api('GET','/kasan')||[];
+  const el=document.getElementById('kasanList');
+  if(!rows.length){el.innerHTML='<p class="text-gray-400 text-sm text-center py-4">加算未設定</p>';return;}
+  el.innerHTML=rows.map(r=>`<div class="card mb-2 flex justify-between items-center">
+    <div><span class="font-bold text-sm">${r.kasan_name}</span><span class="text-xs text-gray-500 ml-2">${r.kasan_code} / ${r.kasan_rate}%</span></div>
+    <button class="btn btn-red text-xs px-2 py-1" onclick="deleteKasan(${r.id})">削除</button>
+  </div>`).join('');
+}
+async function addKasan(){
+  const code=document.getElementById('newKasanCode').value.trim();
+  const name=document.getElementById('newKasanName').value.trim();
+  const rate=parseFloat(document.getElementById('newKasanRate').value)||0;
+  if(!code||!name) return;
+  await api('POST','/kasan',{kasan_code:code,kasan_name:name,kasan_rate:rate});
+  document.getElementById('newKasanCode').value='';
+  document.getElementById('newKasanName').value='';
+  document.getElementById('newKasanRate').value='';
+  loadKasan();
+}
+async function addKasanPreset(name,code,rate){
+  await api('POST','/kasan',{kasan_code:code,kasan_name:name,kasan_rate:rate});
+  loadKasan();
+}
+async function deleteKasan(kid){
+  if(!confirm('削除しますか？')) return;
+  await api('DELETE',`/kasan/${kid}`); loadKasan();
+}
+function initBillingCsv(){
+  const now=new Date();
+  const ys=document.getElementById('bCsvYear');
+  if(!ys.options.length){
+    for(let y=now.getFullYear()-1;y<=now.getFullYear()+1;y++){const o=document.createElement('option');o.value=y;o.textContent=y+'年';if(y===now.getFullYear())o.selected=true;ys.appendChild(o);}
+  }
+  document.getElementById('bCsvMonth').value=now.getMonth()+1;
+}
+async function loadBillingPreview(){
+  const y=document.getElementById('bCsvYear').value;
+  const m=document.getElementById('bCsvMonth').value;
+  const d=await api('GET',`/billing/preview/${y}/${m}`);
+  if(!d) return;
+  const el=document.getElementById('billingPreview');
+  el.classList.remove('hidden');
+  if(!d.items.length){el.innerHTML='<p class="text-gray-500 text-sm">対象データなし（訪問記録を確認してください）</p>';return;}
+  const warns=d.warning_count>0?`<div class="text-red-600 text-xs font-bold mb-2">⚠️ 警告 ${d.warning_count}件</div>`:'';
+  el.innerHTML=warns+`<div class="text-xs font-bold mb-2">合計: ${d.total_amount.toLocaleString()}円 / ${d.total_units.toLocaleString()}単位</div>`+
+    d.items.map(i=>{
+      const bodyTxt=i.body_visits>0?`身体${i.body_visits}回(${i.body_units}単位) `:'';
+      const lifeTxt=i.life_visits>0?`家事${i.life_visits}回(${i.life_units}単位) `:'';
+      return `<div class="border-b border-gray-100 py-2 text-xs">
+      <span class="font-bold">${i.name}</span> ${i.alerts.length?'<span class="text-red-500">⚠ '+i.alerts.join(' ')+'</span>':''}
+      <div class="text-gray-500">${bodyTxt}${lifeTxt}→ ${i.total_units}単位 / ${i.amount.toLocaleString()}円（負担${i.futan.toLocaleString()}円）</div>
+    </div>`;}).join('');
+}
+async function downloadBillingCsv(){
+  const y=document.getElementById('bCsvYear').value;
+  const m=document.getElementById('bCsvMonth').value;
+  const r=await fetch(`${API}/billing/csv/${y}/${m}`,{headers:{'Authorization':'Bearer '+token}});
+  if(!r.ok){const e=await r.json().catch(()=>({}));alert(e.detail||'CSVの生成に失敗しました');return;}
+  const blob=await r.blob();
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=`kokuho_${y}${String(m).padStart(2,'0')}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+function openBillingInvoice(){
+  const y=document.getElementById('bCsvYear').value;
+  const m=document.getElementById('bCsvMonth').value;
+  window.open(`${API}/billing/invoice/${y}/${m}`,'_blank');
+}
 
 // ── dashboard alerts ──
 function renderDashAlerts(d) {
@@ -1161,8 +1405,11 @@ async function submitMeeting() {
   clearDrafts(['mtMinutes']); checkPendingDrafts(); closeModal('meetingModal'); loadMeetings();
 }
 
-if(token) startApp();
-else document.getElementById('loginScreen').classList.remove('hidden');
+if(location.hash==='#register') {
+  token=''; localStorage.removeItem('houmon_token'); localStorage.removeItem('houmon_office');
+  document.getElementById('loginScreen').classList.remove('hidden'); switchAuthTab('register');
+} else if(token) { startApp(); }
+else { document.getElementById('loginScreen').classList.remove('hidden'); }
 
 // ── 自動保存ユーティリティ ───────────────────────────────────────────────
 // ── 一次保存・下書きアラート ──────────────────────────────────────────────────
