@@ -1334,3 +1334,76 @@ async def billing_invoice(year: int, month: int, oid: int = Depends(current_offi
 {pages or '<p style="padding:20px;color:#666">対象データがありません</p>'}
 </body></html>"""
     return HTMLResponse(html)
+@app.post("/api/utage-webhook")
+async def utage_webhook(request: Request):
+    import json as _j
+    try:
+        body = await request.body()
+        with open("/tmp/univapay_webhook_houmon.log", "a") as f:
+            f.write("=== " + datetime.now().isoformat() + " ===\n")
+            f.write(body.decode("utf-8", errors="replace")[:2000] + "\n\n")
+        try:
+            data = _j.loads(body)
+        except Exception:
+            form = await request.form()
+            data = dict(form)
+        event_type = data.get("type", "")
+        inner = data.get("data", data)
+        status = inner.get("status", "")
+        email = (
+            (inner.get("metadata") or {}).get("email") or
+            (inner.get("metadata") or {}).get("mail") or
+            (inner.get("transaction_token") or {}).get("email") or
+            ((inner.get("subscription") or {}).get("metadata") or {}).get("email") or
+            inner.get("email") or
+            data.get("mail") or data.get("email") or ""
+        )
+        if not email:
+            return JSONResponse({"status": "error", "message": "email not found"}, status_code=400)
+        # 停止系イベントの判定
+        is_deactivate = (
+            "fail" in event_type or "suspend" in event_type or "cancel" in event_type or
+            status in ("failed", "suspended", "cancelled", "terminated") or
+            "停止" in event_type or "失敗" in event_type
+        )
+        db = get_db()
+        if is_deactivate:
+            cur = db.execute(
+                "UPDATE offices SET subscription_status='suspended' WHERE email=?",
+                (email,)
+            )
+            db.commit()
+            updated = cur.rowcount
+            db.close()
+            if updated == 0:
+                return JSONResponse({"status": "not_found", "email": email}, status_code=404)
+            return {"status": "suspended", "email": email}
+        # 有効化処理
+        amount = (
+            inner.get("requested_amount") or inner.get("amount") or
+            (inner.get("subscription") or {}).get("amount") or 0
+        )
+        product_name = (
+            (inner.get("metadata") or {}).get("product_name") or
+            (inner.get("metadata") or {}).get("item_name") or
+            data.get("product_name") or data.get("item_name") or ""
+        )
+        if "本部" in product_name or "ヘッドクォーター" in product_name or amount >= 19800:
+            plan = "hq"
+        elif "プロ" in product_name or amount >= 14800:
+            plan = "pro"
+        else:
+            plan = "standard"
+        sub_end = (datetime.now() + timedelta(days=365)).isoformat()
+        cur = db.execute(
+            "UPDATE offices SET subscription_status='active', plan=?, trial_end=? WHERE email=?",
+            (plan, sub_end, email)
+        )
+        db.commit()
+        updated = cur.rowcount
+        db.close()
+        if updated == 0:
+            return JSONResponse({"status": "not_found", "email": email}, status_code=404)
+        return {"status": "ok", "plan": plan, "email": email}
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
