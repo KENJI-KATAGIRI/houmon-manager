@@ -207,6 +207,27 @@ def init_db():
         FOREIGN KEY (hq_id) REFERENCES hq_accounts(id),
         FOREIGN KEY (office_id) REFERENCES offices(id)
     );
+    CREATE TABLE IF NOT EXISTS kasan_settings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        office_id INTEGER NOT NULL,
+        kasan_code TEXT NOT NULL,
+        kasan_name TEXT NOT NULL,
+        kasan_rate REAL DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        notes TEXT DEFAULT '',
+        created_at TEXT DEFAULT (datetime('now','localtime')),
+        FOREIGN KEY (office_id) REFERENCES offices(id)
+    );
     """)
     conn.commit()
+    for col in ["jigyosho_no TEXT DEFAULT ''","pref_no TEXT DEFAULT ''","service_code TEXT DEFAULT ''",
+                "units_per_visit INTEGER DEFAULT 254","tanka_unit INTEGER DEFAULT 1140","new_mode INTEGER DEFAULT 0",
+                "service_code_life TEXT DEFAULT ''"]:
+        try: conn.execute(f"ALTER TABLE offices ADD COLUMN {col}"); conn.commit()
+        except: pass
+    for col in ["jukyusha_no TEXT DEFAULT ''","jukyusha_valid_from TEXT DEFAULT ''",
+                "jukyusha_valid_to TEXT DEFAULT ''","shikyu_visits INTEGER DEFAULT 26",
+                "futan_jogen INTEGER DEFAULT 0"]:
+        try: conn.execute(f"ALTER TABLE clients ADD COLUMN {col}"); conn.commit()
+        except: pass
     conn.close()

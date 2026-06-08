@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
-import sqlite3, hashlib, secrets, json, os, csv, io, smtplib
+import sqlite3, hashlib, secrets, json, os, csv, io, smtplib, calendar
 from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -14,6 +14,7 @@ try:
 except ImportError:
     OpenAIClient = None
 
+import univapay
 from database import get_db, init_db
 
 SECRET_KEY = "houmon-manager-secret-2025-vkz8"
@@ -23,6 +24,76 @@ BASE_PATH = "/houmon"
 app = FastAPI(root_path=BASE_PATH)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 init_db()
+
+def _load_admin_env():
+    env = {}
+    import os
+    p = os.path.expanduser("~/.secrets/welfare_admin.env")
+    if os.path.exists(p):
+        for line in open(p):
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                env[k.strip()] = v.strip()
+    return env
+
+_admin_env = _load_admin_env()
+
+
+def post_utage_contact(name: str, email: str, form_step_id: str):
+    """UTAGE登録フォームへコンタクトをPOSTしてステップメールを開始"""
+    try:
+        import urllib.request, urllib.parse, urllib.error, re as _re
+        register_url = "https://utage-system.com/p/" + form_step_id + "/register"
+        store_url    = "https://utage-system.com/p/" + form_step_id + "/store"
+        req = urllib.request.Request(register_url, headers={"User-Agent": "welfare-saas/1.0"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            html_content = r.read().decode("utf-8", errors="replace")
+        m = _re.search('name=["' + chr(39) + ']rid["' + chr(39) + ']' + chr(92) + chr(92) + 's+value=["' + chr(39) + ']([^"' + chr(39) + ']+)["' + chr(39) + ']', html_content, _re.IGNORECASE)
+        if not m:
+            return
+        rid = m.group(1)
+        payload = urllib.parse.urlencode({"name": name, "mail": email, "rid": rid}).encode("utf-8")
+        req2 = urllib.request.Request(store_url, data=payload, method="POST",
+                                      headers={"Content-Type": "application/x-www-form-urlencoded",
+                                               "User-Agent": "welfare-saas/1.0"})
+        with urllib.request.urlopen(req2, timeout=8) as r2:
+            _ = r2.read()
+    except Exception:
+        pass
+
+def send_admin_notify(office_name: str, email: str, app_name: str, app_url: str):
+    """新規登録時に管理者へ通知メールを送信"""
+    try:
+        import smtplib
+        from email.mime.text import MIMEText
+        host = _admin_env.get("ADMIN_SMTP_HOST", "")
+        user = _admin_env.get("ADMIN_SMTP_USER", "")
+        pw   = _admin_env.get("ADMIN_SMTP_PASS", "")
+        to   = _admin_env.get("ADMIN_EMAIL", "info@gaiaarts.org")
+        if not host or not user or not pw:
+            return
+        body = f"""【{app_name}】新規登録がありました
+
+事業所名: {office_name}
+メール:   {email}
+登録日時: {datetime.now().strftime("%Y-%m-%d %H:%M")}
+アプリ:   {app_url}
+
+---
+トライアル期間: 30日間
+"""
+        msg = MIMEText(body, "plain", "utf-8")
+        msg["Subject"] = f"【{app_name}】新規登録 — {office_name}"
+        msg["From"] = user
+        msg["To"] = to
+        with smtplib.SMTP(host, 587) as s:
+            s.starttls()
+            s.login(user, pw)
+            s.send_message(msg)
+    except Exception as e:
+        pass  # 通知失敗はアプリ動作に影響させない
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ── auth helpers ──────────────────────────────────────────────
@@ -111,11 +182,17 @@ async def register(req: RegisterReq):
     if db.execute("SELECT id FROM offices WHERE username=?", (req.username,)).fetchone():
         db.close(); raise HTTPException(400, "already_exists")
     salt = secrets.token_hex(16)
+    trial_start = datetime.now().isoformat()
     trial_end = (datetime.now()+timedelta(days=30)).isoformat()
-    db.execute("INSERT INTO offices (username,office_name,email,pw_hash,pw_salt,plan,subscription_status,trial_end) VALUES (?,?,?,?,?,?,?,?)",
+    db.execute("INSERT INTO offices (username,office_name,email,pw_hash,pw_salt,plan,subscription_status,trial_start,trial_end) VALUES (?,?,?,?,?,?,?,?)",
         (req.username, req.office_name, req.email, hash_pw(req.password,salt), salt, "trial","trial", trial_end))
     db.commit()
     row = db.execute("SELECT id FROM offices WHERE username=?", (req.username,)).fetchone()
+    send_admin_notify(req.office_name, req.email, "訪問介護マネージャー", "https://gaiaarts.org/houmon/")
+    # UTAGE ステップメール開始
+    import threading
+    threading.Thread(target=post_utage_contact, args=(req.office_name, req.email, "swoXyK71IYAH"), daemon=True).start()
+    send_admin_notify(req.facility_name if hasattr(req, "facility_name") else req.office_name, req.email, "訪問介護マネージャー", "https://gaiaarts.org/houmon/")
     db.close()
     return {"token": make_token(row["id"], req.username), "office_name": req.office_name}
 
@@ -131,7 +208,7 @@ async def login(req: LoginReq):
 @app.get("/api/me")
 async def me(oid: int = Depends(current_office)):
     db = get_db()
-    row = db.execute("SELECT id,username,office_name,email,plan,subscription_status,trial_end FROM offices WHERE id=?", (oid,)).fetchone()
+    row = db.execute("SELECT id,username,office_name,email,plan,subscription_status,trial_end,new_mode,jigyosho_no FROM offices WHERE id=?", (oid,)).fetchone()
     db.close()
     return dict(row)
 
@@ -769,6 +846,45 @@ def current_hq(request: Request):
 def get_hq_office_ids(hq_id, db):
     return [r["office_id"] for r in db.execute("SELECT office_id FROM hq_office_access WHERE hq_id=?", (hq_id,)).fetchall()]
 
+
+
+# ── サブスクリプション / トライアル ──────────────────────────────
+@app.get("/api/trial-status")
+async def trial_status(oid: int = Depends(current_office)):
+    db = get_db()
+    row = db.execute("SELECT subscription_status, trial_start, trial_end, plan FROM offices WHERE id=?", (oid,)).fetchone()
+    db.close()
+    if not row: raise HTTPException(404)
+    status = row["subscription_status"]
+    days_left = None
+    if status == "trial" and row["trial_end"]:
+        delta = datetime.fromisoformat(row["trial_end"]) - datetime.now()
+        days_left = max(0, delta.days)
+    return {"status": status, "days_left": days_left, "plan": row["plan"], "trial_end": row["trial_end"]}
+
+class ActivateReq(BaseModel):
+    office_id: int
+    plan: str
+    token: str  # 照合用トークン
+
+ACTIVATE_SECRET = os.environ.get("WELFARE_ACTIVATE_SECRET", "welfare-activate-2025")
+
+@app.post("/api/utage-activate")
+async def utage_activate(req: ActivateReq):
+    if req.token != ACTIVATE_SECRET:
+        raise HTTPException(403, "invalid token")
+    plan_map = {"standard": "standard", "pro": "pro", "hq": "hq"}
+    if req.plan not in plan_map:
+        raise HTTPException(400, "invalid plan")
+    db = get_db()
+    db.execute(
+        "UPDATE offices SET subscription_status='active', plan=? WHERE id=?",
+        (req.plan, req.office_id)
+    )
+    db.commit()
+    db.close()
+    return {"ok": True, "office_id": req.office_id, "plan": req.plan}
+
 @app.post("/api/hq/register")
 async def hq_register(req: HqRegisterReq, key: str=""):
     if key != ADMIN_KEY: raise HTTPException(403)
@@ -911,6 +1027,59 @@ async def hq_change_password(req: HqChangePasswordReq, hq_id: int = Depends(curr
 ADMIN_KEY = "houmon-admin-2025"
 class ActivateReq(BaseModel):
     username: str; plan: str
+# 居宅介護 基本報酬 単位数テーブル（R6年度 障害福祉サービス 種別11）
+# 身体介護（mins上限, サービスコード, 単位数）
+_BODY_TABLE = [
+    (30,  "111101", 256),
+    (60,  "111201", 409),
+    (90,  "111301", 564),
+    (120, "111401", 660),
+    (150, "111501", 756),
+    (180, "111601", 852),
+]
+# 家事援助
+_LIFE_TABLE = [
+    (30,  "112101", 106),
+    (60,  "112201", 190),
+    (90,  "112301", 244),
+]
+
+def _visit_mins(ci, co):
+    """訪問時間（分）を計算。失敗時は30分を返す。"""
+    try:
+        sh, sm = map(int, (ci or "").split(":")[:2])
+        eh, em = map(int, (co or "").split(":")[:2])
+        return max(0, (eh * 60 + em) - (sh * 60 + sm)) or 30
+    except Exception:
+        return 30
+
+def _visit_info(is_body, mins):
+    """(サービスコード, 単位数) を返す。延長加算も計算。"""
+    if is_body:
+        for mx, code, upv in _BODY_TABLE:
+            if mins <= mx:
+                return code, upv
+        # 180分超: 延長 83単位/30分
+        extra = max(0, (mins - 180) // 30)
+        return "111701", 921 + 83 * extra
+    else:
+        for mx, code, upv in _LIFE_TABLE:
+            if mins <= mx:
+                return code, upv
+        # 90分超: 延長 35単位/30分
+        extra = max(0, (mins - 90) // 30)
+        return "112401", 311 + 35 * extra
+
+class BillingSettingsReq(BaseModel):
+    jigyosho_no: Optional[str]=""; pref_no: Optional[str]=""
+    service_code: Optional[str]="111101"; service_code_life: Optional[str]="112101"
+    tanka_unit: Optional[int]=1140; new_mode: Optional[int]=0
+class JukyushaReq(BaseModel):
+    jukyusha_no: Optional[str]=""; jukyusha_valid_from: Optional[str]=""; jukyusha_valid_to: Optional[str]=""
+    shikyu_visits: Optional[int]=26; futan_jogen: Optional[int]=0
+class KasanReq(BaseModel):
+    kasan_code: str; kasan_name: str; kasan_rate: Optional[float]=0
+    is_active: Optional[int]=1; notes: Optional[str]=""
 
 @app.get("/api/admin/offices")
 async def admin_offices(key: str):
@@ -927,3 +1096,241 @@ async def admin_activate(req: ActivateReq, key: str):
     db.execute("UPDATE offices SET plan=?,subscription_status='active' WHERE username=?", (req.plan, req.username))
     db.commit(); db.close()
     return {"ok": True}
+
+# ── billing settings ──────────────────────────────────────────
+@app.get("/api/billing/settings")
+async def get_billing_settings(oid: int = Depends(current_office)):
+    db=get_db()
+    row=db.execute("SELECT jigyosho_no,pref_no,service_code,service_code_life,tanka_unit,new_mode FROM offices WHERE id=?",(oid,)).fetchone()
+    db.close(); return dict(row) if row else {}
+
+@app.put("/api/billing/settings")
+async def update_billing_settings(req: BillingSettingsReq, oid: int = Depends(current_office)):
+    db=get_db()
+    db.execute("UPDATE offices SET jigyosho_no=?,pref_no=?,service_code=?,service_code_life=?,tanka_unit=?,new_mode=? WHERE id=?",
+        (req.jigyosho_no,req.pref_no,req.service_code,req.service_code_life,req.tanka_unit,req.new_mode,oid))
+    db.commit(); db.close(); return {"ok":True}
+
+@app.get("/api/billing/jukyusha")
+async def get_jukyusha(oid: int = Depends(current_office)):
+    db=get_db(); check_active(oid,db)
+    rows=db.execute("SELECT id,name,kana,jukyusha_no,jukyusha_valid_from,jukyusha_valid_to,shikyu_visits,futan_jogen FROM clients WHERE office_id=? AND is_active=1 ORDER BY kana",(oid,)).fetchall()
+    db.close(); return [dict(r) for r in rows]
+
+@app.put("/api/billing/jukyusha/{cid}")
+async def update_jukyusha(cid: int, req: JukyushaReq, oid: int = Depends(current_office)):
+    db=get_db(); check_active(oid,db)
+    db.execute("UPDATE clients SET jukyusha_no=?,jukyusha_valid_from=?,jukyusha_valid_to=?,shikyu_visits=?,futan_jogen=? WHERE id=? AND office_id=?",
+        (req.jukyusha_no,req.jukyusha_valid_from,req.jukyusha_valid_to,req.shikyu_visits,req.futan_jogen,cid,oid))
+    db.commit(); db.close(); return {"ok":True}
+
+@app.get("/api/kasan")
+async def get_kasan(oid: int = Depends(current_office)):
+    db=get_db(); check_active(oid,db)
+    rows=db.execute("SELECT * FROM kasan_settings WHERE office_id=? ORDER BY kasan_code",(oid,)).fetchall()
+    db.close(); return [dict(r) for r in rows]
+
+@app.post("/api/kasan")
+async def create_kasan(req: KasanReq, oid: int = Depends(current_office)):
+    db=get_db(); check_active(oid,db)
+    db.execute("INSERT INTO kasan_settings (office_id,kasan_code,kasan_name,kasan_rate,is_active,notes) VALUES (?,?,?,?,?,?)",
+        (oid,req.kasan_code,req.kasan_name,req.kasan_rate,req.is_active,req.notes))
+    db.commit(); db.close(); return {"ok":True}
+
+@app.put("/api/kasan/{kid}")
+async def update_kasan(kid: int, req: KasanReq, oid: int = Depends(current_office)):
+    db=get_db(); check_active(oid,db)
+    db.execute("UPDATE kasan_settings SET kasan_code=?,kasan_name=?,kasan_rate=?,is_active=?,notes=? WHERE id=? AND office_id=?",
+        (req.kasan_code,req.kasan_name,req.kasan_rate,req.is_active,req.notes,kid,oid))
+    db.commit(); db.close(); return {"ok":True}
+
+@app.delete("/api/kasan/{kid}")
+async def delete_kasan(kid: int, oid: int = Depends(current_office)):
+    db=get_db(); check_active(oid,db)
+    db.execute("DELETE FROM kasan_settings WHERE id=? AND office_id=?",(kid,oid))
+    db.commit(); db.close(); return {"ok":True}
+
+@app.get("/api/billing/preview/{year}/{month}")
+async def billing_preview(year: int, month: int, oid: int = Depends(current_office)):
+    db=get_db(); check_active(oid,db)
+    office=db.execute("SELECT * FROM offices WHERE id=?",(oid,)).fetchone()
+    prefix=f"{year:04d}-{month:02d}"
+    clients=db.execute(
+        "SELECT id,name,kana,jukyusha_no,shikyu_visits,futan_jogen,jukyusha_valid_to FROM clients WHERE office_id=? AND is_active=1 ORDER BY kana",
+        (oid,)).fetchall()
+    visits=db.execute(
+        "SELECT client_id,checkin_time,checkout_time,body_care,life_support FROM visit_records WHERE office_id=? AND visit_date LIKE ? AND checkout_time!=''",
+        (oid,prefix+"%")).fetchall()
+    kasans=db.execute("SELECT * FROM kasan_settings WHERE office_id=? AND is_active=1",(oid,)).fetchall()
+    tanka=office["tanka_unit"] or 1140
+    db.close()
+    # 訪問ごとに身体/家事 × 時間から単位数を計算しクライアント別に集計
+    from collections import defaultdict
+    agg=defaultdict(lambda:{"body_v":0,"life_v":0,"body_u":0,"life_u":0})
+    for v in visits:
+        cid=v["client_id"]
+        is_body=bool((v["body_care"] or "").strip())
+        mins=_visit_mins(v["checkin_time"],v["checkout_time"])
+        _,upv=_visit_info(is_body,mins)
+        if is_body: agg[cid]["body_v"]+=1; agg[cid]["body_u"]+=upv
+        else:       agg[cid]["life_v"]+=1; agg[cid]["life_u"]+=upv
+    last_day=f"{year:04d}-{month:02d}-{calendar.monthrange(year,month)[1]:02d}"
+    total_units=0; total_amount=0; result=[]
+    for c in clients:
+        a=agg.get(c["id"]); total_v=(a["body_v"]+a["life_v"]) if a else 0
+        if total_v==0: continue
+        shikyu=c["shikyu_visits"] or 26
+        actual_v=min(total_v,shikyu)
+        scale=actual_v/total_v
+        body_u=round((a["body_u"] or 0)*scale); life_u=round((a["life_u"] or 0)*scale)
+        base_units=body_u+life_u
+        kasan_units=sum(round(base_units*k["kasan_rate"]/100) for k in kasans)
+        svc_units=base_units+kasan_units
+        amount=svc_units*tanka//100
+        futan=min(c["futan_jogen"] or 0,amount)
+        total_units+=svc_units; total_amount+=amount
+        alerts=[]
+        if not c["jukyusha_no"]: alerts.append("受給者番号未登録")
+        if total_v>shikyu: alerts.append(f"支給量超過（{total_v}回/{shikyu}回）")
+        if c["jukyusha_valid_to"] and c["jukyusha_valid_to"]<last_day: alerts.append("受給者証期限切れ")
+        result.append({"client_id":c["id"],"name":c["name"],
+            "jukyusha_no":c["jukyusha_no"] or "","total_visits":total_v,"actual_visits":actual_v,
+            "shikyu_visits":shikyu,
+            "body_visits":a["body_v"] if a else 0,"body_units":body_u,
+            "life_visits":a["life_v"] if a else 0,"life_units":life_u,
+            "base_units":base_units,"kasan_units":kasan_units,
+            "total_units":svc_units,"amount":amount,"futan":futan,"alerts":alerts})
+    return {"items":result,"total_units":total_units,"total_amount":total_amount,"tanka":tanka,
+            "jigyosho_no":office["jigyosho_no"] or "","warning_count":sum(len(i["alerts"]) for i in result)}
+
+@app.get("/api/billing/csv/{year}/{month}")
+async def billing_csv(year: int, month: int, oid: int = Depends(current_office)):
+    db=get_db(); check_active(oid,db)
+    office=db.execute("SELECT * FROM offices WHERE id=?",(oid,)).fetchone()
+    if not office["jigyosho_no"]: db.close(); raise HTTPException(400,"事業所番号が未設定です。請求設定から登録してください。")
+    prefix=f"{year:04d}-{month:02d}"; billing_ym=f"{year:04d}{month:02d}"
+    tanka=office["tanka_unit"] or 1140
+    pref_no=(office["pref_no"] or "00").zfill(2)
+    jigyosho_no=office["jigyosho_no"].zfill(10)
+    clients=db.execute(
+        "SELECT id,name,jukyusha_no,shikyu_visits,futan_jogen FROM clients WHERE office_id=? AND is_active=1 AND jukyusha_no!='' AND jukyusha_no IS NOT NULL ORDER BY kana",
+        (oid,)).fetchall()
+    visits=db.execute(
+        "SELECT client_id,checkin_time,checkout_time,body_care,life_support FROM visit_records WHERE office_id=? AND visit_date LIKE ? AND checkout_time!=''",
+        (oid,prefix+"%")).fetchall()
+    kasans=db.execute("SELECT * FROM kasan_settings WHERE office_id=? AND is_active=1",(oid,)).fetchall()
+    db.close()
+    # (client_id → [(code, upv), ...]) 各訪問のサービスコード+単位数
+    from collections import defaultdict
+    client_visits=defaultdict(list)
+    client_meta={c["id"]:c for c in clients}
+    for v in visits:
+        cid=v["client_id"]
+        if cid not in client_meta: continue
+        is_body=bool((v["body_care"] or "").strip())
+        mins=_visit_mins(v["checkin_time"],v["checkout_time"])
+        code,upv=_visit_info(is_body,mins)
+        client_visits[cid].append((code,upv))
+    hb_lines=[]; hb_count=0; total_units=0; total_amount=0
+    for c in clients:
+        cid=c["id"]; v_list=client_visits.get(cid,[])
+        if not v_list: continue
+        shikyu=c["shikyu_visits"] or 26
+        actual_list=v_list[:min(len(v_list),shikyu)]
+        # (code,upv) 別にグループ化
+        code_groups=defaultdict(int)
+        for code,upv in actual_list: code_groups[(code,upv)]+=1
+        jno=str(c["jukyusha_no"]).zfill(10)
+        c_base=0; c_amount=0
+        for (code,upv),cnt in sorted(code_groups.items()):
+            lu=upv*cnt; la=lu*tanka//100
+            hb_lines.append(f"HB,{billing_ym}01,02,{pref_no},{jigyosho_no},{jno},{c['name']},{billing_ym},11,{code},{upv},{cnt},1,{lu},{la},0,0,0")
+            hb_count+=1; c_base+=lu; c_amount+=la
+        for k in kasans:
+            if k["kasan_rate"]>0 and k["kasan_code"]:
+                ku=round(c_base*k["kasan_rate"]/100); ka=ku*tanka//100
+                hb_lines.append(f"HB,{billing_ym}01,02,{pref_no},{jigyosho_no},{jno},{c['name']},{billing_ym},11,{k['kasan_code']},{ku},1,1,{ku},{ka},0,0,0")
+                hb_count+=1; c_base+=ku; c_amount+=ka
+        futan=min(c["futan_jogen"] or 0,c_amount)
+        # 最後のHBラインに利用者負担額を追記する代わり、FTで合算
+        total_units+=c_base; total_amount+=c_amount
+    ha=f"HA,{billing_ym}01,02,{pref_no},{jigyosho_no},{office['office_name']},{billing_ym},{hb_count:06d}"
+    ft=f"FT,{hb_count:06d},{total_units:07d},{total_amount:09d}"
+    content="\r\n".join([ha]+hb_lines+[ft])+"\r\n"
+    try: encoded=content.encode("cp932")
+    except UnicodeEncodeError: encoded=content.encode("cp932",errors="replace")
+    fname=f"kokuho_{jigyosho_no}_{billing_ym}.csv"
+    return StreamingResponse(io.BytesIO(encoded),media_type="application/octet-stream",
+        headers={"Content-Disposition":f"attachment; filename={fname}"})
+
+@app.get("/api/billing/invoice/{year}/{month}", response_class=HTMLResponse)
+async def billing_invoice(year: int, month: int, oid: int = Depends(current_office)):
+    db=get_db(); check_active(oid,db)
+    office=db.execute("SELECT * FROM offices WHERE id=?",(oid,)).fetchone()
+    prefix=f"{year:04d}-{month:02d}"; tanka=office["tanka_unit"] or 1140
+    clients=db.execute(
+        "SELECT id,name,jukyusha_no,shikyu_visits,futan_jogen FROM clients WHERE office_id=? AND is_active=1 ORDER BY kana",
+        (oid,)).fetchall()
+    visits=db.execute(
+        "SELECT client_id,checkin_time,checkout_time,body_care,life_support FROM visit_records WHERE office_id=? AND visit_date LIKE ? AND checkout_time!=''",
+        (oid,prefix+"%")).fetchall()
+    kasans=db.execute("SELECT * FROM kasan_settings WHERE office_id=? AND is_active=1",(oid,)).fetchall()
+    db.close()
+    from collections import defaultdict
+    agg=defaultdict(lambda:{"body_v":0,"life_v":0,"body_u":0,"life_u":0})
+    for v in visits:
+        cid=v["client_id"]; is_body=bool((v["body_care"] or "").strip())
+        mins=_visit_mins(v["checkin_time"],v["checkout_time"]); _,upv=_visit_info(is_body,mins)
+        if is_body: agg[cid]["body_v"]+=1; agg[cid]["body_u"]+=upv
+        else:       agg[cid]["life_v"]+=1; agg[cid]["life_u"]+=upv
+    next_month=month+1 if month<12 else 1; next_year=year if month<12 else year+1
+    today=datetime.now().strftime("%Y年%m月%d日")
+    pages=""
+    for c in clients:
+        a=agg.get(c["id"]); total_v=(a["body_v"]+a["life_v"]) if a else 0
+        if total_v==0: continue
+        shikyu=c["shikyu_visits"] or 26; actual_v=min(total_v,shikyu)
+        scale=actual_v/total_v
+        body_u=round((a["body_u"] or 0)*scale); life_u=round((a["life_u"] or 0)*scale)
+        base_units=body_u+life_u; base_amount=base_units*tanka//100
+        body_detail=(f"<tr><td style='padding:6px;border:1px solid #000'>身体介護（{a['body_v']}回 / {body_u}単位）</td><td style='padding:6px;border:1px solid #000;text-align:right'>{body_u*tanka//100:,}円</td></tr>" if a and a["body_v"] else "")
+        life_detail=(f"<tr><td style='padding:6px;border:1px solid #000'>家事援助（{a['life_v']}回 / {life_u}単位）</td><td style='padding:6px;border:1px solid #000;text-align:right'>{life_u*tanka//100:,}円</td></tr>" if a and a["life_v"] else "")
+        k_rows=""; k_total=0
+        for k in kasans:
+            if k["kasan_rate"]>0:
+                ku=round(base_units*k["kasan_rate"]/100); ka=ku*tanka//100
+                k_rows+=f"<tr><td style='padding:6px;border:1px solid #000'>{k['kasan_name']}</td><td style='padding:6px;border:1px solid #000;text-align:right'>{ka:,}円</td></tr>"
+                k_total+=ka
+        total_amount=base_amount+k_total; futan=min(c["futan_jogen"] or 0,total_amount)
+        pages+=f"""<div style="page-break-after:always;padding:20px;font-family:'MS Mincho','游明朝',serif;font-size:11pt">
+<h2 style="text-align:center;font-size:16pt;margin-bottom:20px">{year}年{month}月分　利用者負担金請求書</h2>
+<table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+  <tr><td style="width:30%;font-weight:bold;padding:6px;border:1px solid #000">宛先</td><td style="padding:6px;border:1px solid #000"><strong>{c['name']}</strong>　様</td></tr>
+  <tr><td style="font-weight:bold;padding:6px;border:1px solid #000">請求事業所</td><td style="padding:6px;border:1px solid #000">{office['office_name']}</td></tr>
+  <tr><td style="font-weight:bold;padding:6px;border:1px solid #000">サービス種別</td><td style="padding:6px;border:1px solid #000">居宅介護（障害福祉）</td></tr>
+  <tr><td style="font-weight:bold;padding:6px;border:1px solid #000">対象期間</td><td style="padding:6px;border:1px solid #000">{year}年{month}月1日〜{year}年{month}月末日</td></tr>
+  <tr><td style="font-weight:bold;padding:6px;border:1px solid #000">サービス提供回数</td><td style="padding:6px;border:1px solid #000">{actual_v}回</td></tr>
+</table>
+<h3 style="font-size:13pt;margin-bottom:8px">請求明細</h3>
+<table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+  <thead><tr style="background:#f0f0f0"><th style="padding:6px;border:1px solid #000;text-align:left">項目</th><th style="padding:6px;border:1px solid #000;text-align:right">金額</th></tr></thead>
+  <tbody>
+    {body_detail}{life_detail}
+    {k_rows}
+    <tr style="font-weight:bold;background:#f9f9f9"><td style="padding:6px;border:1px solid #000">給付費合計</td><td style="padding:6px;border:1px solid #000;text-align:right">{total_amount:,}円</td></tr>
+    <tr style="font-weight:bold;background:#e8f4ff"><td style="padding:8px;border:2px solid #000;font-size:14pt">ご請求金額（利用者負担額）</td><td style="padding:8px;border:2px solid #000;text-align:right;font-size:14pt">{futan:,}円</td></tr>
+  </tbody>
+</table>
+<div style="margin-top:12px;font-size:10pt">お支払い期限：{next_year}年{next_month}月25日　／　作成日：{today}</div>
+<div style="margin-top:16px;text-align:right;font-size:10pt">以上よろしくお願いいたします。<br>{office['office_name']}</div>
+</div>"""
+    html=f"""<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">
+<title>利用者負担金請求書 {year}年{month}月</title>
+<style>body{{font-family:'MS Mincho','游明朝',serif;font-size:11pt}}@media print{{@page{{margin:15mm}}.no-print{{display:none}}}}</style>
+</head><body>
+<div class="no-print" style="padding:12px">
+  <button onclick="window.print()" style="padding:8px 20px;background:#0891b2;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">🖨️ 全員分を印刷</button>
+</div>
+{pages or '<p style="padding:20px;color:#666">対象データがありません</p>'}
+</body></html>"""
+    return HTMLResponse(html)
