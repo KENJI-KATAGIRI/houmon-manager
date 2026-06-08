@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c ' *)",
+      "WebSearch",
+      "Bash(bash *)",
+      "Bash(wait)",
+      "Bash(ssh *)",
+      "Bash(rsync -avz --exclude=data/ --exclude=.venv/ /home/kenji-katagiri/apps/houdei-app/ ubuntu@49.212.179.11:/home/ubuntu/apps/houdei-app/)",
+      "Bash(sed -n '124,140p' /home/kenji-katagiri/apps/shuro-app/database.py)",
+      "Bash(sed -n '153,170p' /home/kenji-katagiri/apps/houdei-app/database.py)",
+      "Bash(rsync -avz --exclude='data/' --exclude='.venv/' /home/kenji-katagiri/apps/houdei-app/ ubuntu@49.212.179.11:/home/ubuntu/apps/houdei-app/)"
+    ]
+  }
+}

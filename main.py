@@ -209,7 +209,7 @@ async def get_client(cid: int, oid: int = Depends(current_office)):
 
 @app.put("/api/clients/{cid}")
 async def update_client(cid: int, req: ClientReq, oid: int = Depends(current_office)):
-    db = get_db()
+    db = get_db(); check_active(oid, db)
     db.execute("""UPDATE clients SET name=?,kana=?,gender=?,birthdate=?,care_level=?,address=?,phone=?,
         family_name=?,family_phone=?,family_relation=?,care_manager=?,care_manager_phone=?,allergies=?,notes=?
         WHERE id=? AND office_id=?""",
@@ -560,7 +560,7 @@ async def ai_daily_summary(oid: int = Depends(current_office)):
     lines = [f"【訪問完了 {len(records)}件】"]
     for r in records:
         alert = "⚠️ " if r["client_condition"] in ("poor","bad") else ""
-        notes = f"（{r['helper_notes'][:30]}）" if r.get("helper_notes") else ""
+        notes = f"（{r['helper_notes'][:30]}）" if r["helper_notes"] else ""
         lines.append(f"{alert}{r['client_name']}様 {r['checkin_time']}〜{r['checkout_time']} 担当:{r['helper_name'] or '未設定'} 体調:{cond_label.get(r['client_condition'],'')} {notes}")
     if not_checked:
         lines.append(f"\n【訪問未完了 {len(not_checked)}件】")
