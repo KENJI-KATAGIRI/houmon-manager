@@ -100,48 +100,6 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
 </div>
 
 <!-- メインアプリ -->
-
-<div id="trialBanner" style="display:none;background:#fefce8;border-bottom:2px solid #fbbf24;padding:10px 16px;font-size:13px;color:#92400e;align-items:center;justify-content:space-between;gap:12px">
-  <span>⏰ <strong>トライアル残り <span id="trialDaysLeft">--</span> 日</strong>です。継続利用にはプランをお選びください。</span>
-  <button onclick="document.getElementById('expiredScreen').classList.remove('hidden');document.getElementById('app').classList.add('hidden')" style="background:#2563eb;color:#fff;border:none;padding:6px 16px;border-radius:8px;font-weight:700;cursor:pointer;font-size:12px;white-space:nowrap">プランを選ぶ →</button>
-</div>
-
-<!-- 期限切れ画面 -->
-<div id="expiredScreen" class="hidden" style="min-height:100vh;background:#f8fafc;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:32px 16px">
-  <div style="text-align:center;margin-bottom:24px">
-    <div style="font-size:48px;margin-bottom:8px">⏰</div>
-    <h2 style="font-size:20px;font-weight:700;color:#1e293b;margin:0 0 8px">無料トライアルが終了しました</h2>
-    <p style="color:#64748b;font-size:14px;margin:0">継続利用にはプランをお選びください。<br>データはそのまま引き継がれます。</p>
-  </div>
-  <div style="width:100%;max-width:480px;display:flex;flex-direction:column;gap:16px">
-
-    <div style="background:#fff;border:2px solid #e2e8f0;border-radius:16px;padding:20px">
-      <div style="font-weight:700;font-size:16px;color:#1e293b;margin-bottom:4px">スタンダード</div>
-      <div style="font-size:28px;font-weight:800;color:#2563eb;margin-bottom:4px">¥9,800<span style="font-size:14px;font-weight:400;color:#64748b">/月</span></div>
-      <div style="font-size:12px;color:#64748b;margin-bottom:16px">1事業所・全基本機能</div>
-      <a href="https://utage-system.com/p/Gas8xA5B14Wh" style="display:block;background:#2563eb;color:#fff;text-align:center;padding:12px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none">このプランで申し込む</a>
-    </div>
-
-    <div style="background:#fff;border:2px solid #f59e0b;border-radius:16px;padding:20px;position:relative">
-      <div style="position:absolute;top:-10px;right:16px;background:#f59e0b;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px">おすすめ</div>
-      <div style="font-weight:700;font-size:16px;color:#1e293b;margin-bottom:4px">プロ</div>
-      <div style="font-size:28px;font-weight:800;color:#f59e0b;margin-bottom:4px">¥14,800<span style="font-size:14px;font-weight:400;color:#64748b">/月</span></div>
-      <div style="font-size:12px;color:#64748b;margin-bottom:16px">複数拠点・優先サポート・帳票生成</div>
-      <a href="https://utage-system.com/p/B1ZONe4h5ERG" style="display:block;background:#f59e0b;color:#fff;text-align:center;padding:12px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none">このプランで申し込む</a>
-    </div>
-
-    <div style="background:#fff;border:2px solid #8b5cf6;border-radius:16px;padding:20px">
-      <div style="font-weight:700;font-size:16px;color:#1e293b;margin-bottom:4px">本部プラン</div>
-      <div style="font-size:28px;font-weight:800;color:#8b5cf6;margin-bottom:4px">¥19,800〜<span style="font-size:14px;font-weight:400;color:#64748b">/月</span></div>
-      <div style="font-size:12px;color:#64748b;margin-bottom:16px">本部一括管理・全機能・専任サポート</div>
-      <a href="https://utage-system.com/p/uBqGoZfSHuFS" style="display:block;background:#8b5cf6;color:#fff;text-align:center;padding:12px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none">このプランで申し込む</a>
-    </div>
-
-  </div>
-  <div style="margin-top:24px;text-align:center;color:#94a3b8;font-size:12px">
-    ご不明な点は <a href="mailto:info@gaiaarts.org" style="color:#2563eb">info@gaiaarts.org</a> までご連絡ください
-  </div>
-</div>
 <div id="app" class="hidden">
   <!-- トップバー -->
   <div class="top-bar">
@@ -365,10 +323,99 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
       <button id="billingMenuBtn" class="hidden card text-center cursor-pointer" onclick="showPage('billing')" style="border:2px solid #0891b2">
         <div class="text-3xl mb-1">💴</div><div class="font-bold text-sm" style="color:#0891b2">国保連請求</div>
       </button>
+      <button class="card text-center cursor-pointer" style="border:2px solid #7c3aed" onclick="showPage('tokutei')">
+        <div class="text-3xl mb-1">⭐</div><div class="font-bold text-sm" style="color:#7c3aed">特定事業所加算</div>
+      </button>
+      <button class="card text-center cursor-pointer" style="border:2px solid #0891b2" onclick="showPage('inspection')">
+        <div class="text-3xl mb-1">✅</div><div class="font-bold text-sm" style="color:#0891b2">運営指導対策</div>
+      </button>
+      <button class="card text-center cursor-pointer" style="border:2px solid #059669" onclick="showPage('admin-cal')">
+        <div class="text-3xl mb-1">📅</div><div class="font-bold text-sm" style="color:#059669">行政手続き年間表</div>
+      </button>
+      <button class="card text-center cursor-pointer" style="border:2px solid #dc2626" onclick="showPage('shogu-sim')">
+        <div class="text-3xl mb-1">💰</div><div class="font-bold text-sm" style="color:#dc2626">処遇改善加算 試算</div>
+      </button>
+      <button class="card text-center cursor-pointer" style="border:2px solid #0891b2" onclick="showPage('ict-check')">
+        <div class="text-3xl mb-1">💻</div><div class="font-bold text-sm" style="color:#0891b2">ICT補助金</div>
+      </button>
+      <button class="card text-center cursor-pointer" style="border:2px solid #7c3aed" onclick="showPage('ext-eval')">
+        <div class="text-3xl mb-1">🔍</div><div class="font-bold text-sm" style="color:#7c3aed">外部評価対応</div>
+      </button>
       <button class="card text-center cursor-pointer col-span-2" style="background:linear-gradient(135deg,#0e7490,#0891b2);color:#fff;border:none" onclick="window.location.href='/houmon/hq/auto-login/'">
         <div class="text-3xl mb-1">🏢</div><div class="font-bold text-sm">本部ポータルへ</div>
       </button>
     </div>
+  </div>
+
+  <!-- 運営指導対策チェックリスト -->
+  <div id="page-inspection" class="page">
+    <div class="flex items-center gap-2 mb-3">
+      <button class="btn btn-outline px-3 py-1 text-sm" onclick="showPage('menu')">← 戻る</button>
+      <div class="section-title mb-0">運営指導対策チェックリスト</div>
+    </div>
+    <div id="inspectionResult"></div>
+  </div>
+
+  <!-- 行政手続きカレンダー -->
+  <div id="page-admin-cal" class="page">
+    <div class="flex items-center gap-2 mb-3">
+      <button class="btn btn-outline px-3 py-1 text-sm" onclick="showPage('menu')">← 戻る</button>
+      <div class="section-title mb-0">行政手続き年間スケジュール</div>
+    </div>
+    <div id="adminCalResult"></div>
+  </div>
+
+  <!-- ICT補助金チェックリスト -->
+  <div id="page-ict-check" class="page">
+    <div class="flex items-center gap-2 mb-3">
+      <button class="btn btn-outline px-3 py-1 text-sm" onclick="showPage('menu')">← 戻る</button>
+      <div class="section-title mb-0">ICT補助金 チェックリスト</div>
+    </div>
+    <div id="ictCheckResult"></div>
+  </div>
+
+  <!-- 外部評価対応サポート -->
+  <div id="page-ext-eval" class="page">
+    <div class="flex items-center gap-2 mb-3">
+      <button class="btn btn-outline px-3 py-1 text-sm" onclick="showPage('menu')">← 戻る</button>
+      <div class="section-title mb-0">外部評価対応 チェックリスト</div>
+    </div>
+    <div id="extEvalResult"></div>
+  </div>
+
+  <!-- 処遇改善加算シミュレーター -->
+  <div id="page-shogu-sim" class="page">
+    <div class="flex items-center gap-2 mb-3">
+      <button class="btn btn-outline px-3 py-1 text-sm" onclick="showPage('menu')">← 戻る</button>
+      <div class="section-title mb-0">処遇改善加算 試算</div>
+    </div>
+    <div class="card mb-3 bg-red-50 border border-red-200">
+      <div class="text-xs text-red-700">月間売上を入力して各加算ランクの取得額を試算します。要件チェックで達成可能な加算ランクも確認できます。</div>
+    </div>
+    <div class="card mb-3">
+      <label class="font-bold text-sm">月間売上（円）</label>
+      <input type="number" id="shoguSales" placeholder="空欄で実績から自動推定" class="mt-1">
+    </div>
+    <div class="card mb-3">
+      <div class="font-bold text-sm mb-2">要件チェック</div>
+      <label class="flex items-center gap-2 mb-2"><input type="checkbox" id="shoguReq1" onchange="runShoguSim()"><span class="text-sm">キャリアパス要件（職位・職責・賃金体系の整備）</span></label>
+      <label class="flex items-center gap-2 mb-2"><input type="checkbox" id="shoguReq2" onchange="runShoguSim()"><span class="text-sm">就業規則・賃金規程の整備</span></label>
+      <label class="flex items-center gap-2 mb-2"><input type="checkbox" id="shoguReq3" onchange="runShoguSim()"><span class="text-sm">研修計画の策定と実施</span></label>
+      <label class="flex items-center gap-2 mb-2"><input type="checkbox" id="shoguReq4" onchange="runShoguSim()"><span class="text-sm">月給制への移行（加算Ⅱ要件）</span></label>
+      <label class="flex items-center gap-2 mb-2"><input type="checkbox" id="shoguReq5" onchange="runShoguSim()"><span class="text-sm">職場環境等要件（賃金改善計画）</span></label>
+      <label class="flex items-center gap-2"><input type="checkbox" id="shoguReq6" onchange="runShoguSim()"><span class="text-sm">全職員への賃金改善額の配分</span></label>
+    </div>
+    <button class="btn btn-primary w-full mb-3" onclick="runShoguSim()">試算する</button>
+    <div id="shoguResult"></div>
+  </div>
+
+  <!-- 特定事業所加算 -->
+  <div id="page-tokutei" class="page">
+    <div class="flex items-center gap-2 mb-3">
+      <button class="btn btn-outline px-3 py-1 text-sm" onclick="showPage('menu')">← 戻る</button>
+      <div class="section-title mb-0">特定事業所加算 要件管理</div>
+    </div>
+    <div id="tokuteiResult"></div>
   </div>
 
   <!-- ヘルパー管理 -->
@@ -503,8 +550,9 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
     </div>
   </div>
   <!-- 受給者証編集モーダル -->
-  <div id="jukyushaModal" class="modal">
-    <div class="modal-box">
+  <div id="jukyushaModal" class="modal-overlay" onclick="closeModal('jukyushaModal')">
+    <div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="modal-handle"></div>
       <div class="font-bold text-lg mb-3">受給者証情報 編集</div>
       <input type="hidden" id="jClientId">
       <label>利用者名</label><input type="text" id="jClientName" readonly class="mb-2 bg-gray-50">
@@ -803,6 +851,12 @@ function showPage(name) {
   if(name==='careplans') loadCarePlans();
   if(name==='trainings') loadTrainings();
   if(name==='meetings') loadMeetings();
+  if(name==='tokutei') loadTokuteiCheck();
+  if(name==='inspection') loadInspectionChecklist();
+  if(name==='admin-cal') loadAdminCalendar();
+  if(name==='ict-check') loadIctChecklist();
+  if(name==='ext-eval') loadExtEval();
+  if(name==='shogu-sim') runShoguSim();
   if(name==='billing'){showBillingTab('settings');loadBillingPage();}
 }
 function openModal(id){document.getElementById(id).classList.add('open');}
@@ -846,22 +900,6 @@ async function doRegister() {
 }
 function showLoginError(msg){const el=document.getElementById('loginError');el.textContent=msg;el.classList.remove('hidden');setTimeout(()=>el.classList.add('hidden'),4000);}
 function doLogout(){token='';localStorage.removeItem('houmon_token');localStorage.removeItem('houmon_office');document.getElementById('app').classList.add('hidden');document.getElementById('loginScreen').classList.remove('hidden');}
-
-
-async function checkTrialStatus() {
-  try {
-    const s = await api('GET', '/trial-status');
-    if (!s) return;
-    if (s.status === 'trial' && s.days_left !== null && s.days_left <= 7) {
-      const b = document.getElementById('trialBanner');
-      if (b) { b.style.display = 'flex'; document.getElementById('trialDaysLeft').textContent = s.days_left; }
-    }
-    if (s.status === 'expired' || (s.status === 'trial' && s.days_left === 0)) {
-      document.getElementById('expiredScreen')?.classList.remove('hidden');
-      document.getElementById('app')?.classList.add('hidden');
-    }
-  } catch(e) {}
-}
 
 async function startApp() {
   document.getElementById('loginScreen').classList.add('hidden');
@@ -1330,6 +1368,7 @@ function renderDashAlerts(d) {
   if(d.cp_overdue > 0) html += `<div class="card mb-2 bg-red-50 border border-red-300 cursor-pointer" onclick="showPage('careplans')"><div class="flex items-center gap-2"><span class="text-lg">🔴</span><div><div class="font-bold text-red-700 text-sm">訪問介護計画書 期限超過 ${d.cp_overdue}件</div><div class="text-xs text-red-500">今すぐ更新が必要です →</div></div></div></div>`;
   if(d.cp_soon > 0) html += `<div class="card mb-2 bg-amber-50 border border-amber-300 cursor-pointer" onclick="showPage('careplans')"><div class="flex items-center gap-2"><span class="text-lg">⚠️</span><div><div class="font-bold text-amber-700 text-sm">訪問介護計画書 30日以内に期限 ${d.cp_soon}件</div><div class="text-xs text-amber-500">早めに更新してください →</div></div></div></div>`;
   if(d.unread_handovers > 0) html += `<div class="card mb-2 bg-blue-50 border border-blue-200 cursor-pointer" onclick="showPage('handovers')"><div class="flex items-center gap-2"><span class="text-lg">📋</span><div><div class="font-bold text-blue-700 text-sm">未読の申し送り ${d.unread_handovers}件</div><div class="text-xs text-blue-500">確認する →</div></div></div></div>`;
+  if(d.tokutei_gap) html += `<div class="card mb-2 bg-purple-50 border border-purple-300 cursor-pointer" onclick="showPage('tokutei')"><div class="flex items-center gap-2"><span class="text-lg">⭐</span><div><div class="font-bold text-purple-700 text-sm">特定事業所加算 要件不足あり</div><div class="text-xs text-purple-500">要件を確認して加算取得を →</div></div></div></div>`;
   el.innerHTML = html;
 }
 
@@ -1541,6 +1580,223 @@ function showDraftToast(){
   }
 })();
 // ────────────────────────────────────────────────────────────────────────
+
+// ── 運営指導対策チェックリスト ──
+const INSP_STATUS = {ok:{label:'✅ 対応済',bg:'bg-green-50',border:'border-green-300',text:'text-green-700'},ng:{label:'❌ 未対応',bg:'bg-red-50',border:'border-red-300',text:'text-red-700'},na:{label:'➖ 対象外',bg:'bg-gray-100',border:'border-gray-300',text:'text-gray-500'},unchecked:{label:'○ 未確認',bg:'bg-white',border:'border-gray-200',text:'text-gray-400'}};
+async function loadInspectionChecklist() {
+  const el = document.getElementById('inspectionResult'); el.innerHTML = '<div class="spinner"></div>';
+  const d = await api('GET','/inspection-checklist'); if(!d) return;
+  const scoreColor = d.score>=80?'#16a34a':d.score>=50?'#d97706':'#dc2626';
+  let html = `<div class="card mb-3" style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe)">
+    <div class="flex items-center justify-between">
+      <div><div class="font-bold text-sm mb-1">対応状況スコア</div>
+        <div style="font-size:2.5rem;font-weight:bold;color:${scoreColor}">${d.score}<span style="font-size:1rem">点</span></div>
+        <div class="text-xs text-gray-500">${d.ok_count} / ${d.total}項目 対応済</div>
+      </div>
+      <div style="width:70px;height:70px;border-radius:50%;background:conic-gradient(${scoreColor} ${d.score*3.6}deg,#e5e7eb 0deg);display:flex;align-items:center;justify-content:center">
+        <div style="width:52px;height:52px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;color:${scoreColor}">${d.score}%</div>
+      </div>
+    </div>
+  </div>`;
+  let lastCat = '';
+  d.items.forEach(item => {
+    if(item.cat !== lastCat) { html += `<div class="font-bold text-xs text-gray-500 mt-3 mb-1 px-1">${item.cat}</div>`; lastCat = item.cat; }
+    const st = INSP_STATUS[item.status] || INSP_STATUS.unchecked;
+    html += `<div class="card mb-2 ${st.bg} border ${st.border}" onclick="cycleInspection('${item.key}',this)" style="cursor:pointer">
+      <div class="flex items-start justify-between gap-2">
+        <div class="flex-1">
+          <div class="flex items-center gap-1 mb-1">
+            ${item.required ? '<span class="text-xs bg-red-100 text-red-700 px-1 rounded">必須</span>' : '<span class="text-xs bg-gray-100 text-gray-500 px-1 rounded">推奨</span>'}
+            <span class="text-xs ${st.text} font-bold">${st.label}</span>
+          </div>
+          <div class="text-sm font-medium">${item.label}</div>
+          ${item.checked_at ? `<div class="text-xs text-gray-400 mt-1">確認: ${item.checked_at}</div>` : ''}
+          ${item.note ? `<div class="text-xs text-gray-500 mt-1 italic">${item.note}</div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+const INSP_CYCLE = ['unchecked','ok','ng','na'];
+async function cycleInspection(key, el) {
+  const d = await api('GET','/inspection-checklist'); if(!d) return;
+  const cur = d.items.find(i=>i.key===key);
+  const curStatus = cur?.status || 'unchecked';
+  const nextStatus = INSP_CYCLE[(INSP_CYCLE.indexOf(curStatus)+1) % INSP_CYCLE.length];
+  await api('PATCH','/inspection-checklist',{item_key:key,status:nextStatus,note:cur?.note||''});
+  loadInspectionChecklist();
+}
+
+// ── ICT補助金・外部評価チェックリスト ──
+async function loadIctChecklist() {
+  const el = document.getElementById('ictCheckResult'); if(!el) return;
+  el.innerHTML = '<div class="spinner"></div>';
+  const d = await api('GET','/ict-checklist'); if(!d) return;
+  el.innerHTML = renderChecklistPage(d, 'ict-checklist');
+}
+async function loadExtEval() {
+  const el = document.getElementById('extEvalResult'); if(!el) return;
+  el.innerHTML = '<div class="spinner"></div>';
+  const d = await api('GET','/external-eval'); if(!d) return;
+  el.innerHTML = renderChecklistPage(d, 'external-eval');
+}
+function renderChecklistPage(d, apiPath) {
+  const scoreColor = d.score>=80?'#16a34a':d.score>=50?'#d97706':'#dc2626';
+  let html = `<div class="card mb-3" style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe)">
+    <div class="flex items-center justify-between">
+      <div><div class="font-bold text-sm mb-1">進捗スコア</div>
+        <div style="font-size:2rem;font-weight:bold;color:${scoreColor}">${d.score}%</div>
+        <div class="text-xs text-gray-500">${d.ok_count} / ${d.total}項目 完了</div>
+      </div>
+      <div style="width:60px;height:60px;border-radius:50%;background:conic-gradient(${scoreColor} ${d.score*3.6}deg,#e5e7eb 0deg);display:flex;align-items:center;justify-content:center">
+        <div style="width:44px;height:44px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:13px;color:${scoreColor}">${d.score}</div>
+      </div>
+    </div>
+  </div>`;
+  let lastCat = '';
+  d.items.forEach(item => {
+    if(item.cat !== lastCat) { html += `<div class="font-bold text-xs text-gray-500 mt-3 mb-1 px-1">${item.cat}</div>`; lastCat = item.cat; }
+    const isOk = item.status === 'ok';
+    html += `<div class="card mb-2 ${isOk?'bg-green-50 border border-green-300':'bg-white border border-gray-200'}" onclick="toggleCheckItem('${apiPath}','${item.key}','${item.status}')" style="cursor:pointer">
+      <div class="flex items-start gap-2"><span class="text-lg mt-0.5">${isOk?'✅':'○'}</span>
+        <div class="flex-1"><div class="flex items-center gap-1 mb-0.5">${item.required?'<span class="text-xs bg-red-100 text-red-700 px-1 rounded">必須</span>':'<span class="text-xs bg-gray-100 text-gray-500 px-1 rounded">推奨</span>'}</div>
+          <div class="text-sm">${item.label}</div></div>
+      </div>
+    </div>`;
+  });
+  return html;
+}
+async function toggleCheckItem(apiPath, key, currentStatus) {
+  const newStatus = currentStatus === 'ok' ? 'unchecked' : 'ok';
+  await api('PATCH','/inspection-checklist',{item_key:key,status:newStatus,note:''});
+  if(apiPath==='ict-checklist') loadIctChecklist();
+  else loadExtEval();
+}
+
+// ── 処遇改善加算シミュレーター ──
+async function runShoguSim() {
+  const el = document.getElementById('shoguResult'); if(!el) return;
+  el.innerHTML = '<div class="spinner"></div>';
+  const sales = parseFloat(document.getElementById('shoguSales')?.value) || 0;
+  const body = {
+    monthly_sales: sales,
+    career_path: document.getElementById('shoguReq1')?.checked || false,
+    salary_rules: document.getElementById('shoguReq2')?.checked || false,
+    training_plan: document.getElementById('shoguReq3')?.checked || false,
+    monthly_salary: document.getElementById('shoguReq4')?.checked || false,
+    improvement_plan: document.getElementById('shoguReq5')?.checked || false,
+    all_staff_raise: document.getElementById('shoguReq6')?.checked || false,
+  };
+  const d = await api('POST', '/shogu-sim', body); if(!d) return;
+  const rankColor = {I:'#16a34a',II:'#2563eb',III:'#d97706',IV:'#6b7280'};
+  let html = `<div class="card mb-3 bg-gray-50"><div class="text-xs text-gray-500 mb-1">推定月間売上</div><div class="font-bold text-lg">${d.monthly_sales.toLocaleString()}円</div></div>`;
+  if(d.achievable_rank) {
+    html += `<div class="card mb-3 bg-green-50 border-2 border-green-400"><div class="font-bold text-green-700">現在 加算${d.achievable_rank} 取得可能</div><div class="text-2xl font-bold text-green-800 mt-1">${d.results[d.achievable_rank].monthly_amount.toLocaleString()}円/月<span class="text-sm ml-1">（年間 ${d.results[d.achievable_rank].annual_amount.toLocaleString()}円）</span></div></div>`;
+  } else {
+    html += `<div class="card mb-3 bg-red-50 border border-red-300"><div class="font-bold text-red-700">現状 加算取得不可</div><div class="text-xs text-red-600">キャリアパス要件から整備してください</div></div>`;
+  }
+  html += '<div class="card mb-3"><div class="font-bold text-sm mb-2">全ランク試算</div>';
+  Object.entries(d.results).forEach(([rank, r]) => {
+    const active = rank === d.achievable_rank;
+    html += `<div class="flex items-center justify-between py-1 border-b border-gray-100 ${active?'font-bold':'text-gray-500'}"><span style="color:${rankColor[rank]}">加算${rank}（${r.rate}%）</span><span>${r.monthly_amount.toLocaleString()}円/月</span></div>`;
+  });
+  html += '</div>';
+  if(d.missing_for_next.length > 0) {
+    html += `<div class="card bg-amber-50 border border-amber-200"><div class="font-bold text-sm text-amber-700 mb-1">次のランクへの不足要件</div>${d.missing_for_next.map(m=>`<div class="text-xs text-amber-700 mb-1">・${m}</div>`).join('')}</div>`;
+  }
+  el.innerHTML = html;
+}
+
+// ── 行政手続きカレンダー ──
+const MONTHS_JA = ['','1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+async function loadAdminCalendar() {
+  const el = document.getElementById('adminCalResult'); el.innerHTML = '<div class="spinner"></div>';
+  const d = await api('GET','/admin-schedule'); if(!d) return;
+  let html = `<div class="card mb-3 bg-blue-50 border border-blue-200">
+    <div class="text-sm text-blue-700">現在：<span class="font-bold">${MONTHS_JA[d.current_month]}</span>　今月・来月の対応が上部に表示されます</div>
+  </div>`;
+  let lastMonths = -1;
+  d.items.forEach(item => {
+    if(item.months_until !== lastMonths) {
+      const label = item.months_until === 0 ? '🔴 今月' : item.months_until === 1 ? '🟡 来月' : `${MONTHS_JA[item.month]}`;
+      const bg = item.months_until === 0 ? 'bg-red-50 text-red-700' : item.months_until === 1 ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-600';
+      html += `<div class="font-bold text-xs mt-3 mb-1 px-1 py-1 rounded ${bg}">${label}</div>`;
+      lastMonths = item.months_until;
+    }
+    const urgent = item.months_until <= 1;
+    html += `<div class="card mb-2 ${urgent ? 'border-l-4 '+(item.months_until===0?'border-red-400':'border-amber-400') : ''}">
+      <div class="flex items-start justify-between gap-2">
+        <div class="flex-1">
+          <div class="flex items-center gap-1 flex-wrap">
+            <span class="text-xs bg-gray-100 text-gray-600 px-1 rounded">${item.cat}</span>
+            ${item.day ? `<span class="text-xs text-gray-500">${item.month}月${item.day}日</span>` : `<span class="text-xs text-gray-400">${MONTHS_JA[item.month]}中</span>`}
+          </div>
+          <div class="text-sm font-medium mt-1">${item.title}</div>
+          ${item.note ? `<div class="text-xs text-gray-500 mt-0.5">${item.note}</div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
+// ── 特定事業所加算 ──
+async function loadTokuteiCheck() {
+  const el = document.getElementById('tokuteiResult');
+  el.innerHTML = '<div class="spinner"></div>';
+  let d;
+  try { d = await api('GET', '/tokutei-check'); } catch(e) { el.innerHTML = '<div class="card">データ取得エラー</div>'; return; }
+  if(!d) return;
+  const req = (ok, label) => `<div class="flex items-center gap-2 py-1"><span class="text-lg">${ok ? '✅' : '❌'}</span><span class="text-sm ${ok ? 'text-green-700' : 'text-red-700'}">${label}</span></div>`;
+  const pct = v => `<span class="font-bold text-lg">${v}%</span>`;
+  // 加算取得可能ランク
+  const rankHtml = d.can_tokutei1
+    ? `<div class="card mb-3 bg-green-50 border-2 border-green-400"><div class="flex items-center gap-2"><span class="text-2xl">🏆</span><div><div class="font-bold text-green-700">特定事業所加算Ⅰ 取得可能</div><div class="text-xs text-green-600">全要件を満たしています</div></div></div></div>`
+    : d.can_tokutei2
+    ? `<div class="card mb-3 bg-blue-50 border-2 border-blue-400"><div class="flex items-center gap-2"><span class="text-2xl">⭐</span><div><div class="font-bold text-blue-700">特定事業所加算Ⅱ 取得可能</div><div class="text-xs text-blue-600">研修計画全員実施で加算Ⅰも取得可能</div></div></div></div>`
+    : d.can_tokutei3
+    ? `<div class="card mb-3 bg-amber-50 border-2 border-amber-400"><div class="flex items-center gap-2"><span class="text-2xl">⚠️</span><div><div class="font-bold text-amber-700">特定事業所加算Ⅲ 取得可能</div><div class="text-xs text-amber-600">介護福祉士30%以上で加算Ⅱ・Ⅰも目指せます</div></div></div></div>`
+    : `<div class="card mb-3 bg-red-50 border-2 border-red-400"><div class="flex items-center gap-2"><span class="text-2xl">🔴</span><div><div class="font-bold text-red-700">現状 特定事業所加算 取得不可</div><div class="text-xs text-red-600">以下の要件を確認してください</div></div></div></div>`;
+  el.innerHTML = rankHtml + `
+  <div class="card mb-3">
+    <div class="font-bold text-sm mb-2">① 介護福祉士比率</div>
+    <div class="flex items-end gap-2 mb-1">
+      <div style="font-size:2rem;font-weight:bold;color:${d.req_kaigo30?'#16a34a':d.req_kaigo10?'#d97706':'#dc2626'}">${pct(d.kaigo_ratio)}</div>
+      <div class="text-xs text-gray-500 mb-1">（${d.kaigo_helpers}名 / 全${d.total_helpers}名）</div>
+    </div>
+    <div class="w-full bg-gray-200 rounded-full h-3 mb-2">
+      <div class="h-3 rounded-full" style="width:${Math.min(d.kaigo_ratio,100)}%;background:${d.req_kaigo30?'#16a34a':d.req_kaigo10?'#f59e0b':'#ef4444'}"></div>
+    </div>
+    ${req(d.req_kaigo30, '介護福祉士30%以上（加算Ⅰ・Ⅱ要件）')}
+    ${req(d.req_kaigo10, '介護福祉士10%以上（加算Ⅲ要件）')}
+  </div>
+  <div class="card mb-3">
+    <div class="font-bold text-sm mb-2">② 定期会議の開催</div>
+    <div class="text-sm mb-2">${d.days_since_meeting < 999 ? `前回開催：<span class="font-bold">${d.days_since_meeting}日前</span>（直近3ヶ月：${d.meetings_3m}回）` : '会議記録なし'}</div>
+    ${req(d.req_meeting, '月1回以上の定期会議（全ヘルパー参加）')}
+    ${!d.req_meeting ? `<button class="btn btn-outline mt-2 text-sm" onclick="showPage('meetings')">会議記録を登録 →</button>` : ''}
+  </div>
+  <div class="card mb-3">
+    <div class="font-bold text-sm mb-2">③ 個別研修計画</div>
+    <div class="flex items-end gap-2 mb-1">
+      <div style="font-size:1.5rem;font-weight:bold;color:${d.req_training_plan?'#16a34a':'#dc2626'}">${pct(d.training_coverage)}</div>
+      <div class="text-xs text-gray-500 mb-1">計画作成率（${d.helpers_with_training}名 / ${d.total_helpers}名）</div>
+    </div>
+    <div class="flex items-end gap-2 mb-1">
+      <div style="font-size:1.5rem;font-weight:bold;color:${d.req_training_done?'#16a34a':'#d97706'}">${pct(d.training_done_rate)}</div>
+      <div class="text-xs text-gray-500 mb-1">実施済み率（${d.helpers_done_training}名）</div>
+    </div>
+    ${req(d.req_training_plan, '全ヘルパーへの個別研修計画（加算Ⅰ要件）')}
+    ${!d.req_training_plan ? `<button class="btn btn-outline mt-2 text-sm" onclick="showPage('trainings')">研修計画を登録 →</button>` : ''}
+  </div>
+  <div class="card bg-gray-50 text-xs text-gray-600">
+    <div class="font-bold mb-1">加算要件まとめ</div>
+    <div>加算Ⅰ：介護福祉士30%＋月1回会議＋全員研修計画</div>
+    <div>加算Ⅱ：介護福祉士30%＋月1回会議</div>
+    <div>加算Ⅲ：介護福祉士10%＋月1回会議</div>
+  </div>`;
+}
 </script>
 </body>
 </html>

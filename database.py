@@ -230,4 +230,15 @@ def init_db():
                 "futan_jogen INTEGER DEFAULT 0"]:
         try: conn.execute(f"ALTER TABLE clients ADD COLUMN {col}"); conn.commit()
         except: pass
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS inspection_checks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        office_id INTEGER NOT NULL,
+        item_key TEXT NOT NULL,
+        status TEXT DEFAULT 'unchecked',
+        note TEXT DEFAULT '',
+        checked_at TEXT DEFAULT '',
+        UNIQUE(office_id, item_key),
+        FOREIGN KEY (office_id) REFERENCES offices(id)
+    )"""); conn.commit()
     conn.close()

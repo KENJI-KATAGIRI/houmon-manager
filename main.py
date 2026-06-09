@@ -14,7 +14,6 @@ try:
 except ImportError:
     OpenAIClient = None
 
-import univapay
 from database import get_db, init_db
 
 SECRET_KEY = "houmon-manager-secret-2025-vkz8"
@@ -24,76 +23,6 @@ BASE_PATH = "/houmon"
 app = FastAPI(root_path=BASE_PATH)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 init_db()
-
-def _load_admin_env():
-    env = {}
-    import os
-    p = os.path.expanduser("~/.secrets/welfare_admin.env")
-    if os.path.exists(p):
-        for line in open(p):
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, v = line.split("=", 1)
-                env[k.strip()] = v.strip()
-    return env
-
-_admin_env = _load_admin_env()
-
-
-def post_utage_contact(name: str, email: str, form_step_id: str):
-    """UTAGE登録フォームへコンタクトをPOSTしてステップメールを開始"""
-    try:
-        import urllib.request, urllib.parse, urllib.error, re as _re
-        register_url = "https://utage-system.com/p/" + form_step_id + "/register"
-        store_url    = "https://utage-system.com/p/" + form_step_id + "/store"
-        req = urllib.request.Request(register_url, headers={"User-Agent": "welfare-saas/1.0"})
-        with urllib.request.urlopen(req, timeout=8) as r:
-            html_content = r.read().decode("utf-8", errors="replace")
-        m = _re.search('name=["' + chr(39) + ']rid["' + chr(39) + ']' + chr(92) + chr(92) + 's+value=["' + chr(39) + ']([^"' + chr(39) + ']+)["' + chr(39) + ']', html_content, _re.IGNORECASE)
-        if not m:
-            return
-        rid = m.group(1)
-        payload = urllib.parse.urlencode({"name": name, "mail": email, "rid": rid}).encode("utf-8")
-        req2 = urllib.request.Request(store_url, data=payload, method="POST",
-                                      headers={"Content-Type": "application/x-www-form-urlencoded",
-                                               "User-Agent": "welfare-saas/1.0"})
-        with urllib.request.urlopen(req2, timeout=8) as r2:
-            _ = r2.read()
-    except Exception:
-        pass
-
-def send_admin_notify(office_name: str, email: str, app_name: str, app_url: str):
-    """新規登録時に管理者へ通知メールを送信"""
-    try:
-        import smtplib
-        from email.mime.text import MIMEText
-        host = _admin_env.get("ADMIN_SMTP_HOST", "")
-        user = _admin_env.get("ADMIN_SMTP_USER", "")
-        pw   = _admin_env.get("ADMIN_SMTP_PASS", "")
-        to   = _admin_env.get("ADMIN_EMAIL", "info@gaiaarts.org")
-        if not host or not user or not pw:
-            return
-        body = f"""【{app_name}】新規登録がありました
-
-事業所名: {office_name}
-メール:   {email}
-登録日時: {datetime.now().strftime("%Y-%m-%d %H:%M")}
-アプリ:   {app_url}
-
----
-トライアル期間: 30日間
-"""
-        msg = MIMEText(body, "plain", "utf-8")
-        msg["Subject"] = f"【{app_name}】新規登録 — {office_name}"
-        msg["From"] = user
-        msg["To"] = to
-        with smtplib.SMTP(host, 587) as s:
-            s.starttls()
-            s.login(user, pw)
-            s.send_message(msg)
-    except Exception as e:
-        pass  # 通知失敗はアプリ動作に影響させない
-
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ── auth helpers ──────────────────────────────────────────────
@@ -182,17 +111,11 @@ async def register(req: RegisterReq):
     if db.execute("SELECT id FROM offices WHERE username=?", (req.username,)).fetchone():
         db.close(); raise HTTPException(400, "already_exists")
     salt = secrets.token_hex(16)
-    trial_start = datetime.now().isoformat()
     trial_end = (datetime.now()+timedelta(days=30)).isoformat()
-    db.execute("INSERT INTO offices (username,office_name,email,pw_hash,pw_salt,plan,subscription_status,trial_start,trial_end) VALUES (?,?,?,?,?,?,?,?)",
+    db.execute("INSERT INTO offices (username,office_name,email,pw_hash,pw_salt,plan,subscription_status,trial_end) VALUES (?,?,?,?,?,?,?,?)",
         (req.username, req.office_name, req.email, hash_pw(req.password,salt), salt, "trial","trial", trial_end))
     db.commit()
     row = db.execute("SELECT id FROM offices WHERE username=?", (req.username,)).fetchone()
-    send_admin_notify(req.office_name, req.email, "訪問介護マネージャー", "https://gaiaarts.org/houmon/")
-    # UTAGE ステップメール開始
-    import threading
-    threading.Thread(target=post_utage_contact, args=(req.office_name, req.email, "swoXyK71IYAH"), daemon=True).start()
-    send_admin_notify(req.facility_name if hasattr(req, "facility_name") else req.office_name, req.email, "訪問介護マネージャー", "https://gaiaarts.org/houmon/")
     db.close()
     return {"token": make_token(row["id"], req.username), "office_name": req.office_name}
 
@@ -230,6 +153,11 @@ async def dashboard(oid: int = Depends(current_office)):
     in30 = (datetime.now()+timedelta(days=30)).strftime("%Y-%m-%d")
     cp_overdue = db.execute("SELECT COUNT(*) as c FROM care_plans WHERE office_id=? AND next_review<? AND next_review!=''", (oid, today)).fetchone()["c"]
     cp_soon = db.execute("SELECT COUNT(*) as c FROM care_plans WHERE office_id=? AND next_review BETWEEN ? AND ? AND next_review!=''", (oid, today, in30)).fetchone()["c"]
+    total_h = db.execute("SELECT COUNT(*) as c FROM helpers WHERE office_id=? AND is_active=1", (oid,)).fetchone()["c"]
+    kaigo_h = db.execute("SELECT COUNT(*) as c FROM helpers WHERE office_id=? AND is_active=1 AND qualification='care3'", (oid,)).fetchone()["c"]
+    three_ago = (datetime.now() - timedelta(days=35)).strftime("%Y-%m-%d")
+    mtg_ok = db.execute("SELECT COUNT(*) as c FROM monthly_meetings WHERE office_id=? AND meeting_date>=?", (oid, three_ago)).fetchone()["c"]
+    tokutei_gap = not (kaigo_h / total_h >= 0.1 if total_h > 0 else False) or not mtg_ok
     today_visits = db.execute("""
         SELECT vp.*, c.name as client_name, c.address, h.name as helper_name,
                vr.id as record_id, vr.checkin_time, vr.checkout_time, vr.client_condition
@@ -246,7 +174,7 @@ async def dashboard(oid: int = Depends(current_office)):
         "checked_in": checked_in, "completed": completed,
         "unread_msg": unread_msg, "unread_handovers": unread_handovers,
         "incidents_month": incidents_month,
-        "cp_overdue": cp_overdue, "cp_soon": cp_soon,
+        "cp_overdue": cp_overdue, "cp_soon": cp_soon, "tokutei_gap": tokutei_gap,
         "today_visits": [dict(r) for r in today_visits],
         "recent_msg": [dict(r) for r in recent_msg],
         "today": today, "now_time": now_time
@@ -846,45 +774,6 @@ def current_hq(request: Request):
 def get_hq_office_ids(hq_id, db):
     return [r["office_id"] for r in db.execute("SELECT office_id FROM hq_office_access WHERE hq_id=?", (hq_id,)).fetchall()]
 
-
-
-# ── サブスクリプション / トライアル ──────────────────────────────
-@app.get("/api/trial-status")
-async def trial_status(oid: int = Depends(current_office)):
-    db = get_db()
-    row = db.execute("SELECT subscription_status, trial_start, trial_end, plan FROM offices WHERE id=?", (oid,)).fetchone()
-    db.close()
-    if not row: raise HTTPException(404)
-    status = row["subscription_status"]
-    days_left = None
-    if status == "trial" and row["trial_end"]:
-        delta = datetime.fromisoformat(row["trial_end"]) - datetime.now()
-        days_left = max(0, delta.days)
-    return {"status": status, "days_left": days_left, "plan": row["plan"], "trial_end": row["trial_end"]}
-
-class ActivateReq(BaseModel):
-    office_id: int
-    plan: str
-    token: str  # 照合用トークン
-
-ACTIVATE_SECRET = os.environ.get("WELFARE_ACTIVATE_SECRET", "welfare-activate-2025")
-
-@app.post("/api/utage-activate")
-async def utage_activate(req: ActivateReq):
-    if req.token != ACTIVATE_SECRET:
-        raise HTTPException(403, "invalid token")
-    plan_map = {"standard": "standard", "pro": "pro", "hq": "hq"}
-    if req.plan not in plan_map:
-        raise HTTPException(400, "invalid plan")
-    db = get_db()
-    db.execute(
-        "UPDATE offices SET subscription_status='active', plan=? WHERE id=?",
-        (req.plan, req.office_id)
-    )
-    db.commit()
-    db.close()
-    return {"ok": True, "office_id": req.office_id, "plan": req.plan}
-
 @app.post("/api/hq/register")
 async def hq_register(req: HqRegisterReq, key: str=""):
     if key != ADMIN_KEY: raise HTTPException(403)
@@ -1334,76 +1223,242 @@ async def billing_invoice(year: int, month: int, oid: int = Depends(current_offi
 {pages or '<p style="padding:20px;color:#666">対象データがありません</p>'}
 </body></html>"""
     return HTMLResponse(html)
-@app.post("/api/utage-webhook")
-async def utage_webhook(request: Request):
-    import json as _j
-    try:
-        body = await request.body()
-        with open("/tmp/univapay_webhook_houmon.log", "a") as f:
-            f.write("=== " + datetime.now().isoformat() + " ===\n")
-            f.write(body.decode("utf-8", errors="replace")[:2000] + "\n\n")
-        try:
-            data = _j.loads(body)
-        except Exception:
-            form = await request.form()
-            data = dict(form)
-        event_type = data.get("type", "")
-        inner = data.get("data", data)
-        status = inner.get("status", "")
-        email = (
-            (inner.get("metadata") or {}).get("email") or
-            (inner.get("metadata") or {}).get("mail") or
-            (inner.get("transaction_token") or {}).get("email") or
-            ((inner.get("subscription") or {}).get("metadata") or {}).get("email") or
-            inner.get("email") or
-            data.get("mail") or data.get("email") or ""
-        )
-        if not email:
-            return JSONResponse({"status": "error", "message": "email not found"}, status_code=400)
-        # 停止系イベントの判定
-        is_deactivate = (
-            "fail" in event_type or "suspend" in event_type or "cancel" in event_type or
-            status in ("failed", "suspended", "cancelled", "terminated") or
-            "停止" in event_type or "失敗" in event_type
-        )
-        db = get_db()
-        if is_deactivate:
-            cur = db.execute(
-                "UPDATE offices SET subscription_status='suspended' WHERE email=?",
-                (email,)
-            )
-            db.commit()
-            updated = cur.rowcount
-            db.close()
-            if updated == 0:
-                return JSONResponse({"status": "not_found", "email": email}, status_code=404)
-            return {"status": "suspended", "email": email}
-        # 有効化処理
-        amount = (
-            inner.get("requested_amount") or inner.get("amount") or
-            (inner.get("subscription") or {}).get("amount") or 0
-        )
-        product_name = (
-            (inner.get("metadata") or {}).get("product_name") or
-            (inner.get("metadata") or {}).get("item_name") or
-            data.get("product_name") or data.get("item_name") or ""
-        )
-        if "本部" in product_name or "ヘッドクォーター" in product_name or amount >= 19800:
-            plan = "hq"
-        elif "プロ" in product_name or amount >= 14800:
-            plan = "pro"
-        else:
-            plan = "standard"
-        sub_end = (datetime.now() + timedelta(days=365)).isoformat()
-        cur = db.execute(
-            "UPDATE offices SET subscription_status='active', plan=?, trial_end=? WHERE email=?",
-            (plan, sub_end, email)
-        )
-        db.commit()
-        updated = cur.rowcount
-        db.close()
-        if updated == 0:
-            return JSONResponse({"status": "not_found", "email": email}, status_code=404)
-        return {"status": "ok", "plan": plan, "email": email}
-    except Exception as e:
-        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+# ── 特定事業所加算 要件チェック ────────────────────────────────
+@app.get("/api/tokutei-check")
+async def tokutei_check(oid: int = Depends(current_office)):
+    db = get_db(); check_active(oid, db)
+    today = datetime.now().strftime("%Y-%m-%d")
+    # ① 介護福祉士比率（常勤・非常勤問わず在籍ヘルパー全体で計算）
+    total_helpers = db.execute("SELECT COUNT(*) as c FROM helpers WHERE office_id=? AND is_active=1", (oid,)).fetchone()["c"]
+    kaigo_helpers = db.execute("SELECT COUNT(*) as c FROM helpers WHERE office_id=? AND is_active=1 AND qualification='care3'", (oid,)).fetchone()["c"]
+    kaigo_ratio = round(kaigo_helpers / total_helpers * 100, 1) if total_helpers > 0 else 0
+    # ② 定期会議（直近3ヶ月に開催されているか）
+    three_months_ago = (datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d")
+    meetings_3m = db.execute("SELECT COUNT(*) as c FROM monthly_meetings WHERE office_id=? AND meeting_date>=?", (oid, three_months_ago)).fetchone()["c"]
+    last_meeting = db.execute("SELECT meeting_date FROM monthly_meetings WHERE office_id=? ORDER BY meeting_date DESC LIMIT 1", (oid,)).fetchone()
+    days_since_meeting = (datetime.now() - datetime.strptime(last_meeting["meeting_date"], "%Y-%m-%d")).days if last_meeting else 999
+    # ③ 個別研修計画（全ヘルパーに今年度の研修計画があるか）
+    year_prefix = datetime.now().strftime("%Y")
+    helpers_with_training = db.execute("""
+        SELECT COUNT(DISTINCT helper_id) as c FROM helper_trainings
+        WHERE office_id=? AND plan_date LIKE ? AND helper_id IS NOT NULL
+    """, (oid, year_prefix + "%")).fetchone()["c"]
+    training_coverage = round(helpers_with_training / total_helpers * 100, 1) if total_helpers > 0 else 0
+    # ④ 実施済み研修（done_dateがある）
+    helpers_done_training = db.execute("""
+        SELECT COUNT(DISTINCT helper_id) as c FROM helper_trainings
+        WHERE office_id=? AND plan_date LIKE ? AND done_date!='' AND done_date IS NOT NULL AND helper_id IS NOT NULL
+    """, (oid, year_prefix + "%")).fetchone()["c"]
+    training_done_rate = round(helpers_done_training / total_helpers * 100, 1) if total_helpers > 0 else 0
+    # 加算判定
+    req_kaigo30 = kaigo_ratio >= 30  # 加算I・II要件
+    req_kaigo10 = kaigo_ratio >= 10  # 加算III要件
+    req_meeting = days_since_meeting <= 35  # 月1回以上（少し余裕を持たせる）
+    req_training_plan = training_coverage >= 100  # 全員に研修計画
+    req_training_done = training_done_rate >= 80   # 実施率80%以上
+    can_tokutei1 = req_kaigo30 and req_meeting and req_training_plan and req_training_done
+    can_tokutei2 = req_kaigo30 and req_meeting
+    can_tokutei3 = req_kaigo10 and req_meeting
+    db.close()
+    return {
+        "total_helpers": total_helpers, "kaigo_helpers": kaigo_helpers, "kaigo_ratio": kaigo_ratio,
+        "meetings_3m": meetings_3m, "days_since_meeting": days_since_meeting,
+        "helpers_with_training": helpers_with_training, "helpers_done_training": helpers_done_training,
+        "training_coverage": training_coverage, "training_done_rate": training_done_rate,
+        "req_kaigo30": req_kaigo30, "req_kaigo10": req_kaigo10,
+        "req_meeting": req_meeting, "req_training_plan": req_training_plan, "req_training_done": req_training_done,
+        "can_tokutei1": can_tokutei1, "can_tokutei2": can_tokutei2, "can_tokutei3": can_tokutei3,
+        "today": today
+    }
+
+# ── 運営指導対策チェックリスト ─────────────────────────────────
+INSPECTION_ITEMS_HOUMON = [
+  {"key":"doc_enrollment","cat":"書類・記録","label":"利用者ファイル（契約書・重説・アセスメント・個別計画）の整備","required":True},
+  {"key":"doc_careplan","cat":"書類・記録","label":"訪問介護計画書の作成・交付・保護者署名","required":True},
+  {"key":"doc_visit_record","cat":"書類・記録","label":"サービス実施記録（毎回）の整備と利用者確認","required":True},
+  {"key":"doc_incident","cat":"書類・記録","label":"ヒヤリハット・事故報告書の整備","required":True},
+  {"key":"staff_license","cat":"人員・資格","label":"サービス提供責任者の資格要件（介護福祉士等）確認","required":True},
+  {"key":"staff_ratio","cat":"人員・資格","label":"ヘルパー人員基準の充足","required":True},
+  {"key":"staff_health","cat":"人員・資格","label":"健康診断の実施（年1回以上）","required":True},
+  {"key":"staff_training","cat":"人員・資格","label":"採用時研修・年2回以上の定期研修の実施","required":True},
+  {"key":"meeting_monthly","cat":"会議・研修","label":"サービス提供責任者との定期会議（月1回以上）記録","required":True},
+  {"key":"meeting_individual","cat":"会議・研修","label":"個別研修計画の作成と実施","required":False},
+  {"key":"privacy","cat":"権利擁護","label":"個人情報取扱同意書の取得","required":True},
+  {"key":"complaint","cat":"権利擁護","label":"苦情対応手順の整備・掲示","required":True},
+  {"key":"kinkyu","cat":"緊急対応","label":"緊急時対応マニュアルの整備・周知","required":True},
+  {"key":"bcp","cat":"BCP","label":"業務継続計画（BCP）の策定・訓練","required":True},
+  {"key":"signage","cat":"設備・環境","label":"運営規程・重説・管理者氏名等の掲示","required":True},
+  {"key":"billing_check","cat":"請求","label":"国保連請求内容と実績記録の突合確認","required":True},
+]
+
+class InspectionReq(BaseModel):
+    item_key: str
+    status: str  # ok / ng / na / unchecked
+    note: str = ''
+
+@app.get("/api/inspection-checklist")
+async def get_inspection(oid: int = Depends(current_office)):
+    db = get_db(); check_active(oid, db)
+    rows = db.execute("SELECT item_key, status, note, checked_at FROM inspection_checks WHERE office_id=?", (oid,)).fetchall()
+    db.close()
+    saved = {r["item_key"]: dict(r) for r in rows}
+    items = []
+    for item in INSPECTION_ITEMS_HOUMON:
+        s = saved.get(item["key"], {})
+        items.append({**item, "status": s.get("status","unchecked"), "note": s.get("note",""), "checked_at": s.get("checked_at","")})
+    total = len(items); ok_count = sum(1 for i in items if i["status"]=="ok")
+    return {"items": items, "total": total, "ok_count": ok_count, "score": round(ok_count/total*100) if total else 0}
+
+@app.patch("/api/inspection-checklist")
+async def update_inspection(req: InspectionReq, oid: int = Depends(current_office)):
+    db = get_db(); check_active(oid, db)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    db.execute("""INSERT INTO inspection_checks(office_id,item_key,status,note,checked_at) VALUES(?,?,?,?,?)
+        ON CONFLICT(office_id,item_key) DO UPDATE SET status=excluded.status,note=excluded.note,checked_at=excluded.checked_at""",
+        (oid, req.item_key, req.status, req.note, now)); db.commit(); db.close()
+    return {"ok": True}
+
+# ── 行政手続きカレンダー ─────────────────────────────────────────
+ADMIN_SCHEDULE_HOUMON = [
+  {"month":4,"day":None,"title":"介護報酬改定 対応確認","cat":"請求・報酬","note":"算定単位数・加算要件の変更確認"},
+  {"month":5,"day":10,"title":"前月（4月）分 国保連請求締切","cat":"請求・報酬","note":"請求誤りがないか確認"},
+  {"month":5,"day":None,"title":"前年度 実績報告（自治体）","cat":"報告・届出","note":"自治体により期限が異なる"},
+  {"month":6,"day":10,"title":"前月（5月）分 国保連請求締切","cat":"請求・報酬","note":""},
+  {"month":7,"day":10,"title":"前月（6月）分 国保連請求締切","cat":"請求・報酬","note":""},
+  {"month":8,"day":10,"title":"前月（7月）分 国保連請求締切","cat":"請求・報酬","note":""},
+  {"month":9,"day":10,"title":"前月（8月）分 国保連請求締切","cat":"請求・報酬","note":""},
+  {"month":10,"day":10,"title":"前月（9月）分 国保連請求締切","cat":"請求・報酬","note":""},
+  {"month":10,"day":None,"title":"処遇改善加算 計画届（翌年度分）","cat":"加算・届出","note":"自治体により10〜12月締切"},
+  {"month":11,"day":10,"title":"前月（10月）分 国保連請求締切","cat":"請求・報酬","note":""},
+  {"month":11,"day":None,"title":"介護保険事業計画 ヒアリング対応","cat":"計画・調査","note":"3年に1度・自治体による"},
+  {"month":12,"day":10,"title":"前月（11月）分 国保連請求締切","cat":"請求・報酬","note":""},
+  {"month":1,"day":10,"title":"前月（12月）分 国保連請求締切","cat":"請求・報酬","note":""},
+  {"month":2,"day":10,"title":"前月（1月）分 国保連請求締切","cat":"請求・報酬","note":""},
+  {"month":2,"day":None,"title":"処遇改善加算 実績報告（前年度分）","cat":"加算・届出","note":"自治体により1〜3月締切"},
+  {"month":3,"day":10,"title":"前月（2月）分 国保連請求締切","cat":"請求・報酬","note":""},
+  {"month":3,"day":None,"title":"次年度 加算算定届・変更届","cat":"加算・届出","note":"人員・体制変更がある場合"},
+  {"month":3,"day":31,"title":"個人情報・プライバシーポリシー年次確認","cat":"コンプライアンス","note":""},
+  {"month":4,"day":1,"title":"新年度 運営規程・重要事項説明書 改訂確認","cat":"書類更新","note":"報酬改定に合わせて料金表等を更新"},
+]
+
+@app.get("/api/admin-schedule")
+async def admin_schedule(oid: int = Depends(current_office)):
+    db = get_db(); check_active(oid, db); db.close()
+    today = datetime.now()
+    cur_month = today.month
+    items = []
+    for item in ADMIN_SCHEDULE_HOUMON:
+        m = item["month"]
+        diff = (m - cur_month) % 12
+        items.append({**item, "months_until": diff, "is_this_month": diff == 0, "is_next_month": diff == 1})
+    items.sort(key=lambda x: x["months_until"])
+    return {"items": items, "current_month": cur_month}
+
+# ── 処遇改善加算シミュレーター ──────────────────────────────────
+# R6 介護職員等処遇改善加算（訪問介護）
+SHOGU_RATES_HOUMON = {
+    "I": 24.5, "II": 22.4, "III": 18.0, "IV": 14.5
+}
+# 要件: I=全要件, II=月給・就業規則, III=賃金体系・研修, IV=キャリアパスのみ
+
+class ShoguSimReq(BaseModel):
+    monthly_sales: float = 0           # 月間売上（円）
+    career_path: bool = False           # キャリアパス要件
+    salary_rules: bool = False          # 就業規則・賃金規程
+    monthly_salary: bool = False        # 月給制
+    training_plan: bool = False         # 研修計画・実施
+    improvement_plan: bool = False      # 職場環境等要件（賃金改善計画）
+    all_staff_raise: bool = False       # 全職員への配分
+
+@app.post("/api/shogu-sim")
+async def shogu_sim(req: ShoguSimReq, oid: int = Depends(current_office)):
+    db = get_db(); check_active(oid, db)
+    # 月間売上が未指定の場合は実績から推定
+    if req.monthly_sales <= 0:
+        today = datetime.now()
+        last_month = (today.replace(day=1) - timedelta(days=1))
+        ym = last_month.strftime("%Y-%m")
+        records = db.execute("SELECT COUNT(*) as c FROM visit_records WHERE office_id=? AND visit_date LIKE ?", (oid, ym+"%")).fetchone()["c"]
+        office = db.execute("SELECT units_per_visit, tanka_unit FROM offices WHERE id=?", (oid,)).fetchone()
+        est_visits = records if records > 0 else 80
+        units = office["units_per_visit"] or 254; tanka = office["tanka_unit"] or 1140
+        monthly_sales = est_visits * units * tanka / 100
+    else:
+        monthly_sales = req.monthly_sales
+    db.close()
+    # 加算判定
+    can_4 = req.career_path
+    can_3 = can_4 and req.salary_rules and req.training_plan
+    can_2 = can_3 and req.monthly_salary
+    can_1 = can_2 and req.improvement_plan and req.all_staff_raise
+    achievable = "I" if can_1 else "II" if can_2 else "III" if can_3 else "IV" if can_4 else None
+    results = {}
+    for rank, rate in SHOGU_RATES_HOUMON.items():
+        amount = monthly_sales * rate / 100
+        results[rank] = {"rate": rate, "monthly_amount": round(amount), "annual_amount": round(amount * 12)}
+    missing = []
+    if not req.career_path: missing.append("キャリアパス要件（職位・職責・賃金体系の整備）")
+    if req.career_path and not req.salary_rules: missing.append("就業規則・賃金規程の整備")
+    if req.career_path and not req.training_plan: missing.append("研修計画の策定と実施実績")
+    if can_3 and not req.monthly_salary: missing.append("月給制への移行（加算Ⅱ要件）")
+    if can_2 and not req.improvement_plan: missing.append("職場環境等要件（賃金改善計画）")
+    if can_2 and not req.all_staff_raise: missing.append("全職員への賃金改善額の配分")
+    return {
+        "monthly_sales": round(monthly_sales), "achievable_rank": achievable,
+        "results": results, "missing_for_next": missing,
+        "req_status": {"career_path": req.career_path, "salary_rules": req.salary_rules,
+                       "monthly_salary": req.monthly_salary, "training_plan": req.training_plan,
+                       "improvement_plan": req.improvement_plan, "all_staff_raise": req.all_staff_raise}
+    }
+
+# ── ICT補助金チェックリスト ─────────────────────────────────────
+ICT_ITEMS_HOUMON = [
+  {"key":"ict_has_system","cat":"現状確認","label":"訪問介護記録システム（タブレット記録等）を導入済み","required":False},
+  {"key":"ict_staff_count","cat":"現状確認","label":"常勤職員5名以上（補助金申請要件）","required":True},
+  {"key":"ict_jigyosho_no","cat":"現状確認","label":"事業所番号の確認・申請書類の準備","required":True},
+  {"key":"ict_subsidy_check","cat":"補助金調査","label":"自治体のICT補助金・助成金の公募情報を確認","required":True},
+  {"key":"ict_it_dantai","cat":"補助金調査","label":"IT導入補助金（経済産業省）の対象確認","required":True},
+  {"key":"ict_kaigo_ict","cat":"補助金調査","label":"介護テクノロジー導入支援事業（厚労省）の対象確認","required":True},
+  {"key":"ict_vendor_quote","cat":"導入準備","label":"介護ソフトベンダーから見積書を取得","required":False},
+  {"key":"ict_it_tools","cat":"導入準備","label":"ITツール登録業者リストから対象ソフトを確認","required":False},
+  {"key":"ict_apply","cat":"申請","label":"補助金申請書類（事業計画・見積書等）の作成","required":False},
+  {"key":"ict_training","cat":"導入後","label":"スタッフへのICTツール研修の実施","required":False},
+  {"key":"ict_effect","cat":"導入後","label":"導入効果の測定・報告書作成（補助金精算に必要）","required":False},
+]
+
+@app.get("/api/ict-checklist")
+async def get_ict(oid: int = Depends(current_office)):
+    db = get_db(); check_active(oid, db)
+    rows = db.execute("SELECT item_key, status, note, checked_at FROM inspection_checks WHERE office_id=? AND item_key LIKE 'ict_%'", (oid,)).fetchall()
+    db.close()
+    saved = {r["item_key"]: dict(r) for r in rows}
+    items = [{**item, "status": saved.get(item["key"],{}).get("status","unchecked"), "note": saved.get(item["key"],{}).get("note",""), "checked_at": saved.get(item["key"],{}).get("checked_at","")} for item in ICT_ITEMS_HOUMON]
+    ok_count = sum(1 for i in items if i["status"]=="ok")
+    return {"items": items, "total": len(items), "ok_count": ok_count, "score": round(ok_count/len(items)*100) if items else 0}
+
+# ── 外部評価対応サポート ─────────────────────────────────────────
+EXTERNAL_EVAL_ITEMS = [
+  {"key":"eval_self_check","cat":"自己評価","label":"サービス管理者・スタッフによる自己評価の実施","required":True},
+  {"key":"eval_user_survey","cat":"利用者調査","label":"利用者（家族）アンケートの実施","required":True},
+  {"key":"eval_doc_ready","cat":"書類準備","label":"関係書類（個別支援計画・記録・会議録）の整備","required":True},
+  {"key":"eval_complaint_log","cat":"書類準備","label":"苦情受付・対応記録の整備","required":True},
+  {"key":"eval_incident_log","cat":"書類準備","label":"事故・ヒヤリハット報告書の整備","required":True},
+  {"key":"eval_training_log","cat":"書類準備","label":"職員研修記録の整備","required":True},
+  {"key":"eval_select_org","cat":"評価機関","label":"第三者評価機関の選定・申込み","required":True},
+  {"key":"eval_interview","cat":"評価実施","label":"評価機関との事前打ち合わせ・訪問日程調整","required":True},
+  {"key":"eval_visit","cat":"評価実施","label":"評価機関の訪問・ヒアリング対応","required":True},
+  {"key":"eval_report","cat":"評価後","label":"評価結果報告書の受領・確認","required":True},
+  {"key":"eval_publish","cat":"評価後","label":"評価結果の公表（WAMネット等）","required":True},
+  {"key":"eval_action","cat":"評価後","label":"評価結果に基づく改善計画の策定・実施","required":True},
+]
+
+@app.get("/api/external-eval")
+async def get_external_eval(oid: int = Depends(current_office)):
+    db = get_db(); check_active(oid, db)
+    rows = db.execute("SELECT item_key, status, note, checked_at FROM inspection_checks WHERE office_id=? AND item_key LIKE 'eval_%'", (oid,)).fetchall()
+    db.close()
+    saved = {r["item_key"]: dict(r) for r in rows}
+    items = [{**item, "status": saved.get(item["key"],{}).get("status","unchecked"), "note": saved.get(item["key"],{}).get("note",""), "checked_at": saved.get(item["key"],{}).get("checked_at","")} for item in EXTERNAL_EVAL_ITEMS]
+    ok_count = sum(1 for i in items if i["status"]=="ok")
+    return {"items": items, "total": len(items), "ok_count": ok_count, "score": round(ok_count/len(items)*100) if items else 0}
