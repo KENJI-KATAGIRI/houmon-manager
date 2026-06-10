@@ -1481,7 +1481,7 @@ async def cross_summary_houmon(request: Request):
         cnt = db.execute("SELECT COUNT(*) as c FROM visit_records WHERE visit_date LIKE ?", (ym+"%",)).fetchone()["c"]
         trend.append({"month": ym, "count": cnt})
     db.close()
-    return {"system_type": "houmon", "system_name": "訪問介護", "app_url": "/houmon/", "icon": "🚗",
+    return {"system_type": "houmon", "system_name": "訪問介護", "app_url": "/houmon/", "hq_url": "/houmon/hq/auto-login", "icon": "🚗",
             "active_offices": active_offices, "active_users": active_users,
             "today_activity": today_visits, "today_label": "今日の訪問予定件数",
             "alerts": cp_alerts, "alert_label": "ケアプラン 期限切れ", "monthly_trend": trend}
