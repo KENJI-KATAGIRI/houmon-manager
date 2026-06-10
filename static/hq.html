@@ -46,7 +46,7 @@ label{font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:3
 </head>
 <body>
 
-<div id="loginScreen" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,#164e63,#0891b2)">
+<div id="loginScreen" style="min-height:100vh;display:none;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,#164e63,#0891b2)">
   <div style="width:100%;max-width:360px">
     <div style="text-align:center;margin-bottom:24px"><div style="font-size:44px">🚗</div><h1 style="font-size:20px;font-weight:700;color:#fff;margin-top:8px">訪問介護 本部ポータル</h1><p style="color:#7dd3fc;font-size:12px;margin-top:4px">複数事業所を一元管理</p></div>
     <div class="card" style="border-radius:16px">
@@ -520,12 +520,8 @@ function showPane(name){
 }
 
 (function init(){
-  if(hqToken){
-    fetch(API+'/hq/dashboard',{headers:{'Authorization':'Bearer '+hqToken}}).then(r=>{
-      if(r.ok){document.getElementById('loginScreen').style.display='none';document.getElementById('app').classList.remove('hidden');startApp();}
-      else document.getElementById('loginScreen').style.display='flex';
-    }).catch(()=>document.getElementById('loginScreen').style.display='flex');
-  } else document.getElementById('loginScreen').style.display='flex';
+  if(hqToken){ startApp(); }
+  else { document.getElementById('loginScreen').style.display='flex'; }
 })();
 </script>
 </body>
