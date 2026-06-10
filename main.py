@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi import FastAPI, HTTPException, Depends, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -1485,3 +1485,24 @@ async def cross_summary_houmon(request: Request):
             "active_offices": active_offices, "active_users": active_users,
             "today_activity": today_visits, "today_label": "今日の訪問予定件数",
             "alerts": cp_alerts, "alert_label": "ケアプラン 期限切れ", "monthly_trend": trend}
+
+# ── 音声文字起こし（Whisper API）─────────────────────────────────
+@app.post("/api/voice-transcribe")
+async def voice_transcribe(audio: UploadFile = File(...)):
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    if not api_key:
+        raise HTTPException(500, "OPENAI_API_KEY not configured")
+    try:
+        from openai import OpenAI as OpenAIClient
+        client = OpenAIClient(api_key=api_key)
+        data = await audio.read()
+        ext = "mp4" if "mp4" in (audio.content_type or "") else "webm"
+        transcript = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=(f"voice.{ext}", data, audio.content_type or "audio/webm"),
+            language="ja"
+        )
+        return JSONResponse({"text": transcript.text})
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
