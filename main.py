@@ -706,10 +706,7 @@ async def hq_auto_login():
 .box{{text-align:center;color:#2563eb}}.spin{{border:4px solid #dbeafe;border-top:4px solid #2563eb;border-radius:50%;width:40px;height:40px;animation:s .8s linear infinite;margin:0 auto 16px}}
 @keyframes s{{to{{transform:rotate(360deg)}}}}</style></head>
 <body><div class="box"><div class="spin"></div><div style="font-weight:700">本部ポータルに移動中...</div></div>
-<script>
-localStorage.setItem('houmon_hq_token','{token}');
-setTimeout(()=>location.href='/houmon/hq/',300);
-</script></html>"""
+<script>location.href='/houmon/hq/?t={token}';</script></html>"""
     return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
 @app.get("/demo/", response_class=HTMLResponse)
