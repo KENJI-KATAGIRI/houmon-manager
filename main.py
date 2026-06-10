@@ -1459,3 +1459,29 @@ async def get_external_eval(oid: int = Depends(current_office)):
     items = [{**item, "status": saved.get(item["key"],{}).get("status","unchecked"), "note": saved.get(item["key"],{}).get("note",""), "checked_at": saved.get(item["key"],{}).get("checked_at","")} for item in EXTERNAL_EVAL_ITEMS]
     ok_count = sum(1 for i in items if i["status"]=="ok")
     return {"items": items, "total": len(items), "ok_count": ok_count, "score": round(ok_count/len(items)*100) if items else 0}
+
+# __cross_summary_added__
+_CROSS_KEY = "roukin-cross-2025-xyz"
+
+@app.get("/api/cross-summary")
+async def cross_summary_houmon(request: Request):
+    from datetime import datetime, timedelta
+    if request.headers.get("X-Cross-Key", "") != _CROSS_KEY:
+        raise HTTPException(403)
+    db = get_db()
+    today = datetime.now().strftime("%Y-%m-%d")
+    active_offices  = db.execute("SELECT COUNT(*) as c FROM offices WHERE subscription_status!='cancelled'").fetchone()["c"]
+    active_users    = db.execute("SELECT COUNT(*) as c FROM clients WHERE is_active=1").fetchone()["c"]
+    today_visits    = db.execute("SELECT COUNT(*) as c FROM visit_plans WHERE plan_date=?", (today,)).fetchone()["c"]
+    cp_alerts       = db.execute("SELECT COUNT(*) as c FROM care_plans WHERE next_review<? AND next_review!=''", (today,)).fetchone()["c"]
+    trend = []
+    for i in range(5, -1, -1):
+        d = datetime.now().replace(day=1) - timedelta(days=i*28)
+        ym = d.strftime("%Y-%m")
+        cnt = db.execute("SELECT COUNT(*) as c FROM visit_records WHERE visit_date LIKE ?", (ym+"%",)).fetchone()["c"]
+        trend.append({"month": ym, "count": cnt})
+    db.close()
+    return {"system_type": "houmon", "system_name": "訪問介護", "app_url": "/houmon/", "icon": "🚗",
+            "active_offices": active_offices, "active_users": active_users,
+            "today_activity": today_visits, "today_label": "今日の訪問予定件数",
+            "alerts": cp_alerts, "alert_label": "ケアプラン 期限切れ", "monthly_trend": trend}
