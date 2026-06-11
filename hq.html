@@ -525,59 +525,5 @@ function showPane(name){
   else { document.getElementById('loginScreen').style.display='flex'; }
 })();
 </script>
-<script>
-(function(){
-  function attachMic(ta){
-    if(ta.dataset.mic)return;
-    ta.dataset.mic="1";
-    var wrap=document.createElement("div");
-    wrap.style.cssText="position:relative;width:100%;";
-    ta.parentNode.insertBefore(wrap,ta);
-    wrap.appendChild(ta);
-    var btn=document.createElement("button");
-    btn.type="button";btn.innerHTML="🎤";btn.title="音声入力";
-    btn.style.cssText="position:absolute;bottom:7px;right:7px;width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,.92);box-shadow:0 1px 4px rgba(0,0,0,.18);font-size:15px;cursor:pointer;z-index:10;display:flex;align-items:center;justify-content:center;transition:all .2s;";
-    wrap.appendChild(btn);
-    var mr=null,chunks=[];
-    function resetBtn(){btn.innerHTML="🎤";btn.style.background="rgba(255,255,255,.92)";btn.style.boxShadow="0 1px 4px rgba(0,0,0,.18)";}
-    btn.addEventListener("click",function(e){
-      e.preventDefault();e.stopPropagation();
-      if(mr&&mr.state==="recording"){mr.stop();return;}
-      if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){alert("このブラウザはマイク録音に対応していません。");return;}
-      navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
-        var mime=MediaRecorder.isTypeSupported("audio/webm;codecs=opus")?"audio/webm;codecs=opus":
-                 MediaRecorder.isTypeSupported("audio/webm")?"audio/webm":
-                 MediaRecorder.isTypeSupported("audio/mp4")?"audio/mp4":"";
-        mr=mime?new MediaRecorder(stream,{mimeType:mime}):new MediaRecorder(stream);
-        chunks=[];
-        mr.ondataavailable=function(ev){if(ev.data&&ev.data.size>0)chunks.push(ev.data);};
-        mr.onstop=function(){
-          stream.getTracks().forEach(function(t){t.stop();});
-          if(chunks.length===0){resetBtn();alert("録音データが空です。マイクを確認してください。");return;}
-          var blob=new Blob(chunks,{type:mr.mimeType||"audio/webm"});
-          if(blob.size<500){resetBtn();alert("録音が短すぎます。もう一度お試しください。");return;}
-          btn.innerHTML="⏳";btn.style.background="#dbeafe";btn.style.boxShadow="none";
-          var ext=(blob.type||"").includes("mp4")?"mp4":"webm";
-          var fd=new FormData();fd.append("audio",blob,"voice."+ext);
-          var m=window.location.pathname.match(/^(\/[^\/]+\/)/);var base=m?m[1]:"/";
-          fetch(base+"api/voice-transcribe",{method:"POST",body:fd})
-            .then(function(r){return r.json();})
-            .then(function(d){
-              resetBtn();
-              if(d.text&&d.text.trim()){var c=ta.value;ta.value=c?c+" "+d.text.trim():d.text.trim();ta.dispatchEvent(new Event("input",{bubbles:true}));}
-              else{alert("音声が認識されませんでした。もう少し大きな声でお試しください。");}
-            })
-            .catch(function(){resetBtn();alert("文字起こしに失敗しました。通信状況を確認してください。");});
-        };
-        mr.start(500);
-        btn.innerHTML="⏹";btn.style.background="#fee2e2";btn.style.boxShadow="0 0 0 3px rgba(220,38,38,.3)";
-      }).catch(function(err){resetBtn();alert("マイクの使用を許可してください: "+err.message);});
-    });
-  }
-  function init(){document.querySelectorAll("textarea").forEach(attachMic);}
-  document.readyState==="loading"?document.addEventListener("DOMContentLoaded",init):init();
-  new MutationObserver(function(ms){ms.forEach(function(m){m.addedNodes.forEach(function(n){if(n.nodeType!==1)return;if(n.tagName==="TEXTAREA")attachMic(n);n.querySelectorAll&&n.querySelectorAll("textarea").forEach(attachMic);});});}).observe(document.body,{childList:true,subtree:true});
-})();
-</script>
 </body>
 </html>

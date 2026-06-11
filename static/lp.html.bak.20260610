@@ -135,12 +135,10 @@ footer{background:#0f172a;color:#94a3b8;padding:36px 0;text-align:center;font-si
           <div style="font-weight:900;font-size:15px;color:#93c5fd;line-height:1.6">特定事業所加算・処遇改善加算（最大24.5%）を"取りこぼさない"。<br>ヘルパーの記録から加算要件まで、一気通貫で管理。</div>
         </div>
         <p>ヘルパーはスマホだけで仕事が完結。チェックイン・記録・報告が<strong style="color:#93c5fd">指一本のタップ</strong>で終わる。管理者はオフィスで全員の状況をリアルタイム把握。</p>
-        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px">
-          <a href="https://gaiaarts.org/houmon/#register" class="btn btn-primary btn-lg" target="_blank">🚀 30日間無料で始める</a>
-          <a href="https://gaiaarts.org/houmon/auto-login/" class="btn btn-lg" style="background:transparent;color:#fff;border:2px solid rgba(255,255,255,.6)" target="_blank">📱 まず現場デモを見る（ログイン不要）</a>
+        <div style="display:flex;gap:14px;flex-wrap:wrap">
+          <a href="https://gaiaarts.org/houmon/auto-login/" class="btn btn-primary btn-lg" target="_blank">📱 現場デモを体験する（ログイン不要）</a>
+          <a href="https://gaiaarts.org/houmon/hq/auto-login/" class="btn btn-lg" style="background:transparent;color:#fff;border:2px solid rgba(255,255,255,.6)" target="_blank">🏢 本部デモを見る</a>
         </div>
-        <div style="font-size:12px;color:rgba(255,255,255,.8);margin-bottom:12px;letter-spacing:.03em">✓ 初期費用ゼロ　✓ 30日間無料　✓ カード不要　✓ いつでも解約OK</div>
-        <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(147,197,253,.15);border:1px solid rgba(147,197,253,.4);border-radius:10px;padding:8px 16px;font-size:13px;font-weight:700;color:#93c5fd">🔥 先着20社限定・永久適用価格 ─ 受付開始　{{要確認: 残数}}</div>
         <div class="hero-stats">
           <div class="hero-stat"><div class="hero-stat-num">直帰</div><div class="hero-stat-label">スマホで記録→<br>事務所に戻らなくていい</div></div>
           <div class="hero-stat"><div class="hero-stat-num">30秒</div><div class="hero-stat-label">チェックイン〜<br>サービス記録の入力時間</div></div>
@@ -194,17 +192,6 @@ footer{background:#0f172a;color:#94a3b8;padding:36px 0;text-align:center;font-si
     </div>
   </div>
 </section>
-
-<!-- 「加算で実質無料」登録動機バナー -->
-<div style="background:#eff6ff;border-bottom:1px solid rgba(37,99,235,.15);padding:18px 0">
-  <div class="container">
-    <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;justify-content:center">
-      <div style="font-size:15px;font-weight:700;color:#374151;text-align:center">💰 処遇改善加算は最大24.5%。<strong style="color:var(--blue-dark)">月額より取り戻せる加算額のほうが桁違いに大きい。だからツール代は実質無料</strong></div>
-      <a href="https://gaiaarts.org/houmon/#register" class="btn btn-primary" style="padding:10px 22px;font-size:14px;flex-shrink:0" target="_blank">今すぐ無料で試す →</a>
-    </div>
-    <div style="text-align:center;font-size:12px;color:#9ca3af;margin-top:8px">✓ 初期費用ゼロ　✓ 30日間無料　✓ カード不要　✓ いつでも解約OK</div>
-  </div>
-</div>
 
 <!-- FOR WHO: 新規開業 / システム載せ替え -->
 <section style="padding:60px 0;background:#f8fafc">
@@ -992,7 +979,7 @@ footer{background:#0f172a;color:#94a3b8;padding:36px 0;text-align:center;font-si
 <section class="cta">
   <div class="container">
     <h2 style="font-size:clamp(28px,4vw,44px);font-weight:900;margin-bottom:16px;letter-spacing:-.02em">特定事業所加算・処遇改善加算（最大24.5%）を<br>取りこぼさない。</h2>
-    <p style="font-size:18px;opacity:.9;margin-bottom:28px">30日間は完全無料。クレジットカード不要・いつでも解約OK。</p>
+    <p style="font-size:18px;opacity:.9;margin-bottom:28px">30日間は完全無料。クレジットカード不要でその日から使えます。</p>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:700px;margin:0 auto 32px">
       <div style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:16px;padding:22px;text-align:center">
@@ -1011,7 +998,7 @@ footer{background:#0f172a;color:#94a3b8;padding:36px 0;text-align:center;font-si
       <a href="https://gaiaarts.org/houmon/auto-login/" class="btn btn-primary btn-lg" target="_blank">📱 現場デモを体験する</a>
       <a href="https://gaiaarts.org/houmon/hq/auto-login/" class="btn btn-lg" style="background:transparent;color:#fff;border:2px solid rgba(255,255,255,.6)" target="_blank">🏢 本部デモを見る</a>
     </div>
-    <div class="free-badge">✓ 初期費用ゼロ　✓ 30日間無料　✓ クレジットカード不要　✓ いつでも解約OK</div>
+    <div class="free-badge">✓ 初期費用ゼロ　✓ 30日間無料　✓ クレジットカード不要</div>
   </div>
 </section>
 
