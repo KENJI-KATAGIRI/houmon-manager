@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>訪問介護 本部管理ポータル</title>
+<title>OWL訪問介護manager 本部ポータル</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 :root{--g:#0891b2;--gd:#0e7490;--gl:#e0f2fe}
@@ -60,7 +60,8 @@ label{font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:3
 
 <div id="app" class="hidden">
   <div style="background:var(--g);color:#fff;padding:0 16px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;gap:8px">
-    <div style="display:flex;align-items:center;gap:8px;min-width:0"><span style="font-size:20px;flex-shrink:0">🚗</span><div style="min-width:0"><div style="font-weight:700;font-size:13px" id="orgName">本部</div><div style="font-size:10px;opacity:.7" id="headerDate"></div></div></div>
+    <div style="display:flex;align-items:center;gap:8px;min-width:0"><img src="/houmon/static/owl_logo.png?v=3" style="height:26px;width:auto;flex-shrink:0" alt="OWL"><div style="min-width:0"><div style="font-weight:700;font-size:13px" id="orgName">本部</div><div style="font-size:10px;opacity:.7" id="headerDate"></div></div></div>
+    <button onclick="openVcModal()" style="background:rgba(255,255,255,.2);border:none;color:#fff;padding:5px 10px;border-radius:7px;font-size:11px;cursor:pointer;font-weight:600;flex-shrink:0;margin-right:4px">📹 通話</button>
     <button onclick="doLogout()" style="background:rgba(255,255,255,.15);border:none;color:#fff;padding:5px 10px;border-radius:7px;font-size:11px;cursor:pointer;flex-shrink:0">ログアウト</button>
   </div>
   <div class="layout">
@@ -578,6 +579,47 @@ function showPane(name){
   document.readyState==="loading"?document.addEventListener("DOMContentLoaded",init):init();
   new MutationObserver(function(ms){ms.forEach(function(m){m.addedNodes.forEach(function(n){if(n.nodeType!==1)return;if(n.tagName==="TEXTAREA")attachMic(n);n.querySelectorAll&&n.querySelectorAll("textarea").forEach(attachMic);});});}).observe(document.body,{childList:true,subtree:true});
 })();
+</script>
+
+<!-- ビデオ通話モーダル -->
+<div id="vcModal" onclick="if(event.target===this)closeVcModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div style="font-size:16px;font-weight:700">📹 ビデオ通話</div>
+      <button onclick="closeVcModal()" style="color:#9ca3af;font-size:22px;line-height:1;background:none;border:none;cursor:pointer;padding:0">✕</button>
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:12px;color:#6b7280;margin-bottom:8px;font-weight:500">通話の種類</div>
+      <div id="vcPresets" style="display:flex;flex-wrap:wrap;gap:8px">
+        <button type="button" onclick="vcSelect(this,'houmon-hq')" style="border:2px solid #e5e7eb;border-radius:20px;padding:7px 14px;font-size:13px;cursor:pointer;font-weight:500;color:#374151;background:#f3f4f6;white-space:nowrap">施設と通話</button>
+        <button type="button" onclick="vcSelect(this,'_custom_ルーム名を入力')" style="border:2px solid #e5e7eb;border-radius:20px;padding:7px 14px;font-size:13px;cursor:pointer;font-weight:500;color:#374151;background:#f3f4f6;white-space:nowrap">カスタム</button>
+      </div>
+      <input type="hidden" id="vcCurVal">
+    </div>
+    <div id="vcCustomWrap" style="display:none;margin-bottom:14px">
+      <input id="vcCustomRoom" placeholder="" oninput="vcUpdateUrl()" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box">
+    </div>
+    <div style="background:#f0f4ff;border-radius:10px;padding:14px;margin-bottom:16px">
+      <div style="font-size:11px;color:#6b7280;margin-bottom:6px">📎 相手に送るURL（コピーして共有）</div>
+      <div id="vcUrlText" style="font-size:13px;color:#2563eb;word-break:break-all;font-weight:500;line-height:1.5;min-height:20px"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <button onclick="vcCopyUrl()" id="vcCopyBtn" style="padding:11px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;cursor:pointer;font-weight:500">📋 URLをコピー</button>
+      <button onclick="vcOpenUrl()" style="padding:11px;background:#6c63ff;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">📹 通話開始</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function openVcModal(){document.getElementById('vcModal').style.display='flex';if(!document.getElementById('vcCurVal').value){var f=document.querySelector('#vcPresets button');if(f)f.click();}}
+function closeVcModal(){document.getElementById('vcModal').style.display='none';document.getElementById('vcCurVal').value='';}
+function vcSelect(el,val){document.querySelectorAll('#vcPresets button').forEach(function(b){b.style.borderColor='#e5e7eb';b.style.background='#f3f4f6';b.style.color='#374151';});el.style.borderColor='#6c63ff';el.style.background='#f0eeff';el.style.color='#6c63ff';var isC=val.startsWith('_custom_');document.getElementById('vcCustomWrap').style.display=isC?'block':'none';if(isC){var i=document.getElementById('vcCustomRoom');i.placeholder=val.replace('_custom_','');i.value='';}document.getElementById('vcCurVal').value=val;vcUpdateUrl();}
+function vcUpdateUrl(){var v=document.getElementById('vcCurVal').value;var room=v.startsWith('_custom_')?document.getElementById('vcCustomRoom').value.trim():v;document.getElementById('vcUrlText').textContent=room?'https://meet.gaiaarts.org/?room='+encodeURIComponent(room):'';}
+function vcCopyUrl(){var url=document.getElementById('vcUrlText').textContent;if(!url)return;navigator.clipboard.writeText(url).then(function(){var b=document.getElementById('vcCopyBtn');b.textContent='✅ コピーしました';setTimeout(function(){b.textContent='📋 URLをコピー';},2000);});}
+function vcOpenUrl(){var url=document.getElementById('vcUrlText').textContent;if(url)window.open(url,'_blank');}
+function generateRoomId(prefix){var a=new Uint8Array(6);crypto.getRandomValues(a);return (prefix||'owl')+'-'+Array.from(a).map(function(b){return b.toString(16).padStart(2,'0');}).join('');}
+function openVcModalWith(roomId,name){  document.getElementById('vcModal').style.display='flex';  document.querySelectorAll('#vcPresets button').forEach(function(b){    b.style.borderColor='#e5e7eb';b.style.background='#f3f4f6';b.style.color='#374151';});  document.getElementById('vcCurVal').value='_vcgen_';  document.getElementById('vcCustomWrap').style.display='block';  var inp=document.getElementById('vcCustomRoom');  inp.value=roomId;inp.readOnly=true;inp.style.background='#f8f9fa';inp.style.color='#6c63ff';inp.style.fontWeight='700';  vcUpdateUrl();}
+function vcResetInput(){var inp=document.getElementById('vcCustomRoom');inp.readOnly=false;inp.style.background='';inp.style.color='';inp.style.fontWeight='';}
 </script>
 </body>
 </html>

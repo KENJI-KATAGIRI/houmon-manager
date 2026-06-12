@@ -241,4 +241,14 @@ def init_db():
         UNIQUE(office_id, item_key),
         FOREIGN KEY (office_id) REFERENCES offices(id)
     )"""); conn.commit()
+    conn.execute("""CREATE TABLE IF NOT EXISTS meeting_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entity_id INTEGER,
+        target_name TEXT DEFAULT '',
+        room_id TEXT NOT NULL,
+        meeting_url TEXT NOT NULL,
+        label TEXT DEFAULT '',
+        created_by TEXT DEFAULT '',
+        created_at TEXT DEFAULT (datetime('now','localtime'))
+    )"""); conn.commit()
     conn.close()

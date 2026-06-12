@@ -1506,3 +1506,23 @@ async def voice_transcribe(audio: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(500, str(e))
 
+
+@app.post("/meeting-logs")
+async def create_meeting_log(request: Request, oid: int = Depends(current_office)):
+    body = await request.json()
+    db = get_db()
+    db.execute(
+        "INSERT INTO meeting_logs (entity_id,target_name,room_id,meeting_url,label,created_by) VALUES (?,?,?,?,?,?)",
+        (oid, body.get("target_name",""), body.get("room_id",""), body.get("meeting_url",""), body.get("label",""), body.get("created_by",""))
+    )
+    db.commit()
+    return {"ok": True}
+
+@app.get("/meeting-logs")
+async def get_meeting_logs(oid: int = Depends(current_office)):
+    db = get_db()
+    rows = db.execute(
+        "SELECT * FROM meeting_logs WHERE entity_id=? ORDER BY created_at DESC LIMIT 100",
+        (oid,)
+    ).fetchall()
+    return [dict(r) for r in rows]
