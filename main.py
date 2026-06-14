@@ -23,6 +23,14 @@ BASE_PATH = "/houmon"
 app = FastAPI(root_path=BASE_PATH)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 init_db()
+# ── stripe_customer_id カラム追加 ──
+try:
+    _db = get_db()
+    _db.execute("ALTER TABLE offices ADD COLUMN stripe_customer_id TEXT")
+    _db.commit()
+except Exception:
+    pass
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ── auth helpers ──────────────────────────────────────────────
@@ -1506,23 +1514,105 @@ async def voice_transcribe(audio: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(500, str(e))
 
-
-@app.post("/meeting-logs")
-async def create_meeting_log(request: Request, oid: int = Depends(current_office)):
-    body = await request.json()
-    db = get_db()
-    db.execute(
-        "INSERT INTO meeting_logs (entity_id,target_name,room_id,meeting_url,label,created_by) VALUES (?,?,?,?,?,?)",
-        (oid, body.get("target_name",""), body.get("room_id",""), body.get("meeting_url",""), body.get("label",""), body.get("created_by",""))
-    )
-    db.commit()
-    return {"ok": True}
-
-@app.get("/meeting-logs")
-async def get_meeting_logs(oid: int = Depends(current_office)):
+# ── 総務ツール連携API ──────────────────────────────────────────
+@app.get("/api/v1/users")
+def soumu_users(request: Request):
+    api_key = os.environ.get("SOUMU_API_KEY", "")
+    if not api_key or request.headers.get("X-API-Key") != api_key:
+        raise HTTPException(401, "Unauthorized")
     db = get_db()
     rows = db.execute(
-        "SELECT * FROM meeting_logs WHERE entity_id=? ORDER BY created_at DESC LIMIT 100",
-        (oid,)
+        "SELECT id, name, kana, is_active FROM clients ORDER BY id"
     ).fetchall()
-    return [dict(r) for r in rows]
+    db.close()
+    return [
+        {
+            "id": r["id"],
+            "name": r["name"],
+            "kana": r["kana"],
+            "service_type": "訪問介護",
+            "status": "契約中" if r["is_active"] else "終了",
+        }
+        for r in rows
+    ]
+
+# ── Stripe 決済 ──────────────────────────────────────────────
+from stripe_billing import get_stripe, WEBHOOK_SECRET, PRICES as _STRIPE_PRICES
+import stripe as _stripe_lib
+
+@app.post("/api/stripe/checkout")
+async def stripe_checkout(request: Request, oid: int = Depends(current_office)):
+    s = get_stripe()
+    if not s: raise HTTPException(503, "Stripe not configured")
+    db = get_db()
+    office = db.execute("SELECT * FROM offices WHERE id=?", (oid,)).fetchone()
+    if not office: raise HTTPException(404)
+    try:
+        customer_id = office["stripe_customer_id"]
+    except (IndexError, KeyError):
+        customer_id = None
+    if not customer_id:
+        customer = s.customers.create(
+            email=office["email"], name=office["office_name"],
+            metadata={"office_id": str(oid), "app": "訪問介護Manager"}
+        )
+        customer_id = customer.id
+        db.execute("UPDATE offices SET stripe_customer_id=? WHERE id=?", (customer_id, oid))
+        db.commit()
+    plan = (office["plan"] or "standard")
+    price_id = _STRIPE_PRICES.get(plan) or _STRIPE_PRICES.get("standard", "")
+    if not price_id: raise HTTPException(503, "Price ID not configured")
+    session = s.checkout.sessions.create(
+        customer=customer_id, payment_method_types=["card"],
+        line_items=[{"price": price_id, "quantity": 1}], mode="subscription",
+        success_url="https://gaiaarts.org/houmon/?stripe=success",
+        cancel_url="https://gaiaarts.org/houmon/", locale="ja"
+    )
+    return {"url": session.url}
+
+@app.get("/api/stripe/portal")
+async def stripe_portal(request: Request, oid: int = Depends(current_office)):
+    s = get_stripe()
+    if not s: raise HTTPException(503, "Stripe not configured")
+    db = get_db()
+    office = db.execute("SELECT stripe_customer_id FROM offices WHERE id=?", (oid,)).fetchone()
+    try:
+        cid = office["stripe_customer_id"] if office else None
+    except (IndexError, KeyError):
+        cid = None
+    if not cid: raise HTTPException(400, "no subscription")
+    session = s.billing_portal.sessions.create(
+        customer=cid, return_url="https://gaiaarts.org/houmon/"
+    )
+    return RedirectResponse(session.url)
+
+@app.post("/api/stripe/webhook")
+async def stripe_webhook(request: Request):
+    s = get_stripe()
+    if not s: raise HTTPException(503, "Stripe not configured")
+    payload = await request.body()
+    sig = request.headers.get("stripe-signature", "")
+    try:
+        event = _stripe_lib.Webhook.construct_event(payload, sig, WEBHOOK_SECRET)
+    except Exception as e:
+        raise HTTPException(400, str(e))
+    obj = event["data"]["object"]
+    customer_id = obj.get("customer")
+    if not customer_id: return {"received": True}
+    db = get_db()
+    office = db.execute("SELECT id FROM offices WHERE stripe_customer_id=?", (customer_id,)).fetchone()
+    if not office: return {"received": True}
+    if event["type"] in ("customer.subscription.created", "customer.subscription.updated", "invoice.payment_succeeded"):
+        status = obj.get("status")
+        if not status or status in ("active", "trialing"):
+            db.execute("UPDATE offices SET subscription_status=\'active\' WHERE id=?", (office["id"],))
+            db.commit()
+            print(f"[stripe-webhook] activated: offices id={office['id']}")
+    elif event["type"] in ("customer.subscription.deleted", "customer.subscription.paused"):
+        db.execute("UPDATE offices SET subscription_status=\'cancelled\' WHERE id=?", (office["id"],))
+        db.commit()
+        print(f"[stripe-webhook] cancelled: offices id={office['id']}")
+    elif event["type"] == "invoice.payment_failed":
+        print(f"[stripe-webhook] payment failed customer={customer_id}")
+    return {"received": True}
+

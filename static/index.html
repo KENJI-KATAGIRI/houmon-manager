@@ -474,8 +474,15 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
   <div id="page-settings" class="page">
     <div class="section-title">設定</div>
     <div class="card mb-3">
-      <div class="font-bold text-gray-700 mb-2">📋 プラン情報</div>
+      <div class="font-bold text-gray-700 mb-2">💎 プラン情報</div>
       <div id="planInfo" class="text-sm text-gray-600"></div>
+      <div id="stripe-upgrade-area" style="display:none;margin-top:8px">
+        <p style="font-size:11px;color:#6b7280;margin-bottom:6px">有料プランで全機能を無制限にご利用いただけます。</p>
+        <button id="stripeUpgradeBtn" onclick="stripeCheckout()" style="width:100%;padding:8px;background:#6c63ff;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700">🚀 有料プランにアップグレード</button>
+      </div>
+      <div id="stripe-portal-area" style="display:none;margin-top:8px">
+        <button onclick="stripePortal()" style="width:100%;padding:8px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:8px;cursor:pointer;font-size:12px">⚙️ 解約・カード変更</button>
+      </div>
     </div>
     <div class="card mb-3">
       <div class="font-bold text-gray-700 mb-2">💴 国保連請求モード</div>
@@ -1220,7 +1227,7 @@ function initExport(){const now=new Date();const sel=document.getElementById('ex
 async function downloadCsv(type='visit-records', label='訪問記録'){const y=document.getElementById('exportYear').value;const m=document.getElementById('exportMonth').value;const r=await fetch(`${API}/export/${type}?year=${y}&month=${m}`,{headers:{'Authorization':'Bearer '+token}});if(!r.ok){alert('データがありません');return;}const blob=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${label}_${y}年${String(m).padStart(2,'0')}月.csv`;a.click();}
 
 // ── settings ──
-async function loadSettings(){const me=await api('GET','/me');if(me){const planLabel={trial:'トライアル',standard:'スタンダード'};document.getElementById('planBadge')&&(document.getElementById('planBadge').textContent=planLabel[me.plan]||me.plan);document.getElementById('planInfo').innerHTML=`<div>プラン: <strong>${planLabel[me.plan]||me.plan}</strong></div><div>ステータス: <strong>${me.subscription_status==='trial'?'無料トライアル中':'有効'}</strong></div>${me.trial_end?`<div class="text-gray-400 text-xs mt-1">トライアル終了: ${me.trial_end?.slice(0,10)}</div>`:''}`;
+async function loadSettings(){const me=await api('GET','/me');if(me){const planLabel={trial:'トライアル',standard:'スタンダード'};document.getElementById('planBadge')&&(document.getElementById('planBadge').textContent=planLabel[me.plan]||me.plan);document.getElementById('planInfo').innerHTML=`<div>プラン: <strong>${planLabel[me.plan]||me.plan}</strong></div><div>ステータス: <strong>${me.subscription_status==='trial'?'無料トライアル中':'有効'}</strong></div>${me.trial_end?`<div class="text-gray-400 text-xs mt-1">トライアル終了: ${me.trial_end?.slice(0,10)}</div>`:''}`;const isPaid=me.subscription_status==='active';const up=document.getElementById('stripe-upgrade-area');const pt=document.getElementById('stripe-portal-area');if(up)up.style.display=isPaid?'none':'block';if(pt)pt.style.display=isPaid?'block':'none';
   newMode=me.new_mode||0;
   const btn=document.getElementById('toggleNewModeBtn');
   if(btn) btn.textContent=newMode?'✅ 国保連請求モード：有効（無効にする）':'💴 国保連請求モード：無効（有効にする）';
@@ -1902,6 +1909,26 @@ function vcSelectRandom(el,prefix){var a=new Uint8Array(6);crypto.getRandomValue
 function generateRoomId(prefix){var a=new Uint8Array(6);crypto.getRandomValues(a);return (prefix||'owl')+'-'+Array.from(a).map(function(b){return b.toString(16).padStart(2,'0');}).join('');}
 function openVcModalWith(roomId,name){  document.getElementById('vcModal').style.display='flex';  document.querySelectorAll('#vcPresets button').forEach(function(b){    b.style.borderColor='#e5e7eb';b.style.background='#f3f4f6';b.style.color='#374151';});  document.getElementById('vcCurVal').value='_vcgen_';  document.getElementById('vcCustomWrap').style.display='block';  var inp=document.getElementById('vcCustomRoom');  inp.value=roomId;inp.readOnly=true;inp.style.background='#f8f9fa';inp.style.color='#6c63ff';inp.style.fontWeight='700';  vcUpdateUrl();}
 function vcResetInput(){var inp=document.getElementById('vcCustomRoom');inp.readOnly=false;inp.style.background='';inp.style.color='';inp.style.fontWeight='';}
+
+// ── Stripe決済 ──────────────────────────────────
+async function stripeCheckout() {
+  const btn = document.getElementById('stripeUpgradeBtn');
+  if(btn){ btn.disabled=true; btn.textContent='処理中...'; }
+  try {
+    const r = await api('POST', '/stripe/checkout');
+    if(r && r.url){ window.location.href = r.url; return; }
+    alert('エラーが発生しました: ' + (r && r.detail || '不明'));
+  } catch(e){ alert('通信エラーが発生しました'); }
+  if(btn){ btn.disabled=false; btn.textContent='🚀 有料プランにアップグレード'; }
+}
+async function stripePortal() {
+  window.location.href = '/houmon/api/stripe/portal';
+}
+// stripe=success パラメータ処理
+if(new URLSearchParams(location.search).get('stripe')==='success'){
+  setTimeout(()=>alert('🎉 有料プランが有効になりました！'), 500);
+  history.replaceState({}, '', location.pathname);
+}
 </script>
 </body>
 </html>
