@@ -8,7 +8,7 @@ import sqlite3, hashlib, secrets, json, os, csv, io, smtplib, calendar
 from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from jose import jwt
+import jwt
 try:
     from openai import OpenAI as OpenAIClient
 except ImportError:
@@ -16,12 +16,68 @@ except ImportError:
 
 from database import get_db, init_db
 
-SECRET_KEY = "houmon-manager-secret-2025-vkz8"
+SECRET_KEY = os.environ.get("SECRET_KEY") or (_ for _ in ()).throw(ValueError("SECRET_KEY env var not set"))
 ALGORITHM = "HS256"
+
+# ── ブルートフォース対策 ──────────────────────────────────────────
+import time as _time
+from collections import defaultdict as _defaultdict
+_login_attempts: dict = _defaultdict(list)
+_LIMIT_COUNT = 10
+_LIMIT_WINDOW = 600
+
+def _get_real_ip(request) -> str:
+    return (request.headers.get("X-Real-IP")
+            or request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+            or getattr(request.client, "host", "unknown"))
+
+def _check_rate_limit(ip: str):
+    now = _time.time()
+    _login_attempts[ip] = [t for t in _login_attempts[ip] if now - t < _LIMIT_WINDOW]
+    if len(_login_attempts[ip]) >= _LIMIT_COUNT:
+        raise HTTPException(429, "Too many login attempts. Try again in 10 minutes.")
+    _login_attempts[ip].append(now)
+
 BASE_PATH = "/houmon"
 
-app = FastAPI(root_path=BASE_PATH)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, root_path=BASE_PATH)
+
+# ── nginx経由以外の直接ポートアクセス遮断 ─────────────────────────
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response as _StarResponse
+
+class _LocalhostOnlyMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        client_host = getattr(request.client, "host", "")
+        if client_host not in ("127.0.0.1", "::1", "localhost"):
+            return _StarResponse("Forbidden", status_code=403)
+        return await call_next(request)
+
+app.add_middleware(_LocalhostOnlyMiddleware)
+
+# ── セキュリティレスポンスヘッダー ────────────────────────────────
+class _SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Server"] = ""
+        return response
+
+app.add_middleware(_SecurityHeadersMiddleware)
+
+
+app.add_middleware(CORSMiddleware,
+    allow_origins=[
+        "https://gaiaarts.org", "https://www.gaiaarts.org",
+        "https://meet.gaiaarts.org", "https://life-energy-coaching.net",
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allow_headers=["Authorization", "Content-Type"])
 init_db()
 # ── stripe_customer_id カラム追加 ──
 try:
@@ -34,7 +90,28 @@ except Exception:
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ── auth helpers ──────────────────────────────────────────────
-def hash_pw(pw, salt): return hashlib.sha256((pw+salt).encode()).hexdigest()
+
+# ── パスワードハッシュ (bcrypt + SHA256後方互換) ──────────────────
+import hashlib as _hashlib
+try:
+    import bcrypt as _bcrypt
+    _BCRYPT_AVAILABLE = True
+except ImportError:
+    _BCRYPT_AVAILABLE = False
+
+def hash_pw(pw: str, salt: str = "") -> str:
+    if _BCRYPT_AVAILABLE:
+        return _bcrypt.hashpw(pw.encode(), _bcrypt.gensalt(rounds=12)).decode()
+    return _hashlib.sha256((pw + salt).encode()).hexdigest()
+
+def verify_pw(pw: str, stored_hash: str, salt: str = "") -> bool:
+    if _BCRYPT_AVAILABLE and (stored_hash.startswith("$2b$") or stored_hash.startswith("$2a$")):
+        try:
+            return _bcrypt.checkpw(pw.encode(), stored_hash.encode())
+        except Exception:
+            return False
+    return _hashlib.sha256((pw + salt).encode()).hexdigest() == stored_hash
+
 def make_token(oid, username):
     exp = datetime.utcnow() + timedelta(days=30)
     return jwt.encode({"sub": str(oid), "username": username, "exp": exp}, SECRET_KEY, algorithm=ALGORITHM)
@@ -114,7 +191,12 @@ async def index():
 
 # ── auth ──────────────────────────────────────────────────────
 @app.post("/api/register")
-async def register(req: RegisterReq):
+async def register(req: RegisterReq, request: Request):
+    if len(req.password) < 8 or len(req.password) > 128:
+        raise HTTPException(400, "パスワードは8〜128文字で設定してください")
+    if len(req.username) < 1 or len(req.username) > 100:
+        raise HTTPException(400, "ユーザー名は1〜100文字で設定してください")
+    _check_rate_limit(_get_real_ip(request))
     db = get_db()
     if db.execute("SELECT id FROM offices WHERE username=?", (req.username,)).fetchone():
         db.close(); raise HTTPException(400, "already_exists")
@@ -128,11 +210,13 @@ async def register(req: RegisterReq):
     return {"token": make_token(row["id"], req.username), "office_name": req.office_name}
 
 @app.post("/api/login")
-async def login(req: LoginReq):
+async def login(req: LoginReq, request: Request):
+
+    _check_rate_limit(_get_real_ip(request))
     db = get_db()
     row = db.execute("SELECT * FROM offices WHERE username=?", (req.username,)).fetchone()
     db.close()
-    if not row or hash_pw(req.password, row["pw_salt"]) != row["pw_hash"]: raise HTTPException(401, "invalid")
+    if not row or not verify_pw(req.password, row["pw_hash"], row["pw_salt"]): raise HTTPException(401, "invalid")
     return {"token": make_token(row["id"], req.username), "office_name": row["office_name"],
             "plan": row["plan"], "subscription_status": row["subscription_status"]}
 
@@ -581,7 +665,7 @@ async def ai_daily_summary(oid: int = Depends(current_office)):
             lines.append(f"{v['client_name']}様 {v['start_time']} 担当:{v['helper_name'] or '未割当'}")
     text = "\n".join(lines)
     try:
-        client = OpenAIClient(api_key=api_key)
+        client = OpenAIClient(api_key=api_key, timeout=30.0)
         resp = client.chat.completions.create(
             model="gpt-4o-mini",
             max_tokens=400,
@@ -700,8 +784,19 @@ async def hq_demo_page():
 
 @app.get("/hq/auto-login/", response_class=HTMLResponse)
 @app.get("/hq/auto-login", response_class=HTMLResponse)
-async def hq_auto_login():
+async def hq_auto_login(request: Request, key: str = ""):
     """本部ポータル用自動ログイン"""
+    import time as _t, hashlib as _hl, hmac as _hm
+    _k = key or ""
+    _window = 300  # 5分有効
+    _now = int(_t.time())
+    _valid = False
+    for _ts in range(_now - _window, _now + 5, 1):
+        _expected = _hm.new(ADMIN_KEY.encode(), str(_ts // 60).encode(), _hl.sha256).hexdigest()[:16]
+        if _hm.compare_digest(_k, _expected):
+            _valid = True; break
+    if not _valid:
+        raise HTTPException(403, "forbidden")
     db = get_db()
     row = db.execute("SELECT * FROM hq_accounts WHERE username='honbu'").fetchone()
     db.close()
@@ -714,7 +809,7 @@ async def hq_auto_login():
 .box{{text-align:center;color:#2563eb}}.spin{{border:4px solid #dbeafe;border-top:4px solid #2563eb;border-radius:50%;width:40px;height:40px;animation:s .8s linear infinite;margin:0 auto 16px}}
 @keyframes s{{to{{transform:rotate(360deg)}}}}</style></head>
 <body><div class="box"><div class="spin"></div><div style="font-weight:700">本部ポータルに移動中...</div></div>
-<script>location.href='/houmon/hq/?t={token}';</script></html>"""
+<script>localStorage.setItem('houmon_hq_token',token);location.href='/houmon/hq/';</script></html>"""
     return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
 @app.get("/demo/", response_class=HTMLResponse)
@@ -725,7 +820,18 @@ async def app_demo_page():
 
 @app.get("/auto-login/", response_class=HTMLResponse)
 @app.get("/auto-login", response_class=HTMLResponse)
-async def auto_login():
+async def auto_login(request: Request, key: str = ""):
+    import time as _t, hashlib as _hl, hmac as _hm
+    _k = key or ""
+    _window = 300  # 5分有効
+    _now = int(_t.time())
+    _valid = False
+    for _ts in range(_now - _window, _now + 5, 1):
+        _expected = _hm.new(ADMIN_KEY.encode(), str(_ts // 60).encode(), _hl.sha256).hexdigest()[:16]
+        if _hm.compare_digest(_k, _expected):
+            _valid = True; break
+    if not _valid:
+        raise HTTPException(403, "forbidden")
     db = get_db()
     row = db.execute("SELECT * FROM offices WHERE username='admin'").fetchone()
     db.close()
@@ -752,7 +858,7 @@ async def hq_page():
     return HTMLResponse(content=content, headers={"Cache-Control":"no-store"})
 
 # ── HQ auth ───────────────────────────────────────────────────
-HQ_SECRET = "houmon-hq-secret-2025-wqz6"
+HQ_SECRET = os.environ.get("HQ_SECRET") or (_ for _ in ()).throw(ValueError("HQ_SECRET env var not set"))
 
 class HqLoginReq(BaseModel):
     username: str; password: str
@@ -781,7 +887,7 @@ def get_hq_office_ids(hq_id, db):
 
 @app.post("/api/hq/register")
 async def hq_register(req: HqRegisterReq, key: str=""):
-    if key != ADMIN_KEY: raise HTTPException(403)
+    if not __import__("hmac").compare_digest(key or "", ADMIN_KEY): raise HTTPException(403)
     db = get_db()
     if db.execute("SELECT id FROM hq_accounts WHERE username=?", (req.username,)).fetchone():
         db.close(); raise HTTPException(400, "already_exists")
@@ -801,11 +907,13 @@ async def hq_register(req: HqRegisterReq, key: str=""):
     return {"ok": True, "hq_id": hq_id}
 
 @app.post("/api/hq/login")
-async def hq_login(req: HqLoginReq):
+async def hq_login(req: HqLoginReq, request: Request):
+
+    _check_rate_limit(_get_real_ip(request))
     db = get_db()
     row = db.execute("SELECT * FROM hq_accounts WHERE username=?", (req.username,)).fetchone()
     db.close()
-    if not row or hash_pw(req.password, row["pw_salt"]) != row["pw_hash"]: raise HTTPException(401)
+    if not row or not verify_pw(req.password, row["pw_hash"], row["pw_salt"]): raise HTTPException(401)
     return {"token": make_hq_token(row["id"], req.username), "org_name": row["org_name"]}
 
 @app.get("/api/hq/me")
@@ -910,7 +1018,7 @@ async def hq_send_report(hq_id: int = Depends(current_hq)):
 async def hq_change_password(req: HqChangePasswordReq, hq_id: int = Depends(current_hq)):
     db = get_db()
     row = db.execute("SELECT * FROM hq_accounts WHERE id=?", (hq_id,)).fetchone()
-    if not row or hash_pw(req.current_password, row["pw_salt"]) != row["pw_hash"]:
+    if not row or not verify_pw(req.current_password, row["pw_hash"], row["pw_salt"]):
         db.close(); raise HTTPException(400, "現在のパスワードが正しくありません")
     new_salt = secrets.token_hex(16)
     db.execute("UPDATE hq_accounts SET pw_hash=?,pw_salt=? WHERE id=?",
@@ -918,7 +1026,7 @@ async def hq_change_password(req: HqChangePasswordReq, hq_id: int = Depends(curr
     db.commit(); db.close(); return {"ok": True}
 
 # ── admin ─────────────────────────────────────────────────────
-ADMIN_KEY = "houmon-admin-2025"
+ADMIN_KEY = os.environ.get("ADMIN_KEY") or (_ for _ in ()).throw(ValueError("ADMIN_KEY env var not set"))
 class ActivateReq(BaseModel):
     username: str; plan: str
 # 居宅介護 基本報酬 単位数テーブル（R6年度 障害福祉サービス 種別11）
@@ -977,7 +1085,7 @@ class KasanReq(BaseModel):
 
 @app.get("/api/admin/offices")
 async def admin_offices(key: str):
-    if key != ADMIN_KEY: raise HTTPException(403)
+    if not __import__("hmac").compare_digest(key or "", ADMIN_KEY): raise HTTPException(403)
     db = get_db()
     rows = db.execute("SELECT id,username,office_name,email,plan,subscription_status,trial_end,created_at FROM offices ORDER BY created_at DESC").fetchall()
     db.close()
@@ -985,7 +1093,7 @@ async def admin_offices(key: str):
 
 @app.post("/api/admin/activate")
 async def admin_activate(req: ActivateReq, key: str):
-    if key != ADMIN_KEY: raise HTTPException(403)
+    if not __import__("hmac").compare_digest(key or "", ADMIN_KEY): raise HTTPException(403)
     db = get_db()
     db.execute("UPDATE offices SET plan=?,subscription_status='active' WHERE username=?", (req.plan, req.username))
     db.commit(); db.close()
@@ -1497,13 +1605,19 @@ async def cross_summary_houmon(request: Request):
 # ── 音声文字起こし（Whisper API）─────────────────────────────────
 @app.post("/api/voice-transcribe")
 async def voice_transcribe(audio: UploadFile = File(...)):
+    _ALLOWED_AUDIO = {"audio/webm","audio/ogg","audio/mp4","audio/mpeg","audio/wav","video/webm","video/mp4"}
+    _MAX_AUDIO = 25 * 1024 * 1024  # 25MB
+    if audio.content_type and audio.content_type not in _ALLOWED_AUDIO:
+        raise HTTPException(400, "許可されていないファイル形式です")
     api_key = os.environ.get("OPENAI_API_KEY", "")
     if not api_key:
-        raise HTTPException(500, "OPENAI_API_KEY not configured")
+        raise HTTPException(500, "音声認識が設定されていません")
     try:
         from openai import OpenAI as OpenAIClient
-        client = OpenAIClient(api_key=api_key)
+        client = OpenAIClient(api_key=api_key, timeout=30.0)
         data = await audio.read()
+        if len(data) > _MAX_AUDIO:
+            raise HTTPException(413, "ファイルサイズが大きすぎます(上限25MB)")
         ext = "mp4" if "mp4" in (audio.content_type or "") else "webm"
         transcript = client.audio.transcriptions.create(
             model="whisper-1",
@@ -1511,8 +1625,10 @@ async def voice_transcribe(audio: UploadFile = File(...)):
             language="ja"
         )
         return JSONResponse({"text": transcript.text})
-    except Exception as e:
-        raise HTTPException(500, str(e))
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(500, "音声認識に失敗しました")
 
 # ── 総務ツール連携API ──────────────────────────────────────────
 @app.get("/api/v1/users")
@@ -1535,6 +1651,19 @@ def soumu_users(request: Request):
         }
         for r in rows
     ]
+
+
+def _sync_nicemeet(email: str, plan: str):
+    try:
+        import sqlite3 as _sqlite3
+        nm = _sqlite3.connect("/home/ubuntu/meet/data/booking.db")
+        nm.execute("UPDATE users SET plan=? WHERE email=?", (plan, email))
+        nm.commit()
+        rows = nm.execute("SELECT changes()").fetchone()[0]
+        nm.close()
+        print(f"[stripe-webhook] NiceMeet sync: {email} -> plan={plan} ({rows} rows)")
+    except Exception as e:
+        print(f"[stripe-webhook] NiceMeet sync error: {e}")
 
 # ── Stripe 決済 ──────────────────────────────────────────────
 from stripe_billing import get_stripe, WEBHOOK_SECRET, PRICES as _STRIPE_PRICES
@@ -1600,7 +1729,7 @@ async def stripe_webhook(request: Request):
     customer_id = obj.get("customer")
     if not customer_id: return {"received": True}
     db = get_db()
-    office = db.execute("SELECT id FROM offices WHERE stripe_customer_id=?", (customer_id,)).fetchone()
+    office = db.execute("SELECT id, email FROM offices WHERE stripe_customer_id=?", (customer_id,)).fetchone()
     if not office: return {"received": True}
     if event["type"] in ("customer.subscription.created", "customer.subscription.updated", "invoice.payment_succeeded"):
         status = obj.get("status")
@@ -1608,10 +1737,12 @@ async def stripe_webhook(request: Request):
             db.execute("UPDATE offices SET subscription_status=\'active\' WHERE id=?", (office["id"],))
             db.commit()
             print(f"[stripe-webhook] activated: offices id={office['id']}")
+            _sync_nicemeet(office["email"], "paid")
     elif event["type"] in ("customer.subscription.deleted", "customer.subscription.paused"):
         db.execute("UPDATE offices SET subscription_status=\'cancelled\' WHERE id=?", (office["id"],))
         db.commit()
         print(f"[stripe-webhook] cancelled: offices id={office['id']}")
+        _sync_nicemeet(office["email"], "free")
     elif event["type"] == "invoice.payment_failed":
         print(f"[stripe-webhook] payment failed customer={customer_id}")
     return {"received": True}
