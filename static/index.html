@@ -837,6 +837,8 @@ let clients = [], helpers = [], msgPriority = 'normal';
 let newMode = 0;
 let currentVisitPlan = null;
 
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function jsa(s){return JSON.stringify(String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 async function api(method, path, body) {
   const opts = {method, headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}};
   if(body) opts.body = JSON.stringify(body);
@@ -1439,7 +1441,7 @@ async function loadCarePlans() {
 async function openCarePlanModal(cp=null) {
   if(!clients.length) await loadClientsData();
   const sel = document.getElementById('cpClient');
-  sel.innerHTML = clients.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  sel.innerHTML = clients.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
   if(cp) { sel.value=cp.client_id; ['cpCreated','cpUpdated','cpReview'].forEach((id,i)=>{document.getElementById(id).value=[cp.plan_created,cp.careplan_updated,cp.next_review][i]||'';}); document.getElementById('cpGoals').value=cp.goals||''; document.getElementById('cpNotes').value=cp.notes||''; }
   else { ['cpCreated','cpUpdated','cpReview','cpGoals','cpNotes'].forEach(id=>document.getElementById(id).value=''); applyDrafts(['cpGoals','cpNotes'],'cpDraftBanner'); }
   openModal('carePlanModal');
@@ -1892,6 +1894,9 @@ async function loadTokuteiCheck() {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <button onclick="vcCopyUrl()" id="vcCopyBtn" style="padding:11px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;cursor:pointer;font-weight:500">📋 URLをコピー</button>
       <button onclick="vcOpenUrl()" style="padding:11px;background:#6c63ff;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">📹 通話開始</button>
+    </div>
+    <div style="margin-top:10px;text-align:center">
+      <a href="https://meet.gaiaarts.org/booking/dashboard?mode=welfare" target="_blank" style="font-size:11px;color:#9ca3af;text-decoration:none">⚙ NiceMeet管理画面 →</a>
     </div>
   </div>
 </div>
