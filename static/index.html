@@ -491,7 +491,14 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
     </div>
     <div class="card mb-3 bg-blue-50 border border-blue-200">
       <div class="font-bold text-blue-800 mb-1">お問い合わせ</div>
-      <a href="mailto:kenji.kys@gmail.com" class="btn btn-primary mt-2 text-sm">メールで問い合わせる</a>
+      <div class="card mb-3" style="background:#eff6ff;border:1px solid #bfdbfe">
+      <div style="font-weight:700;color:#1d4ed8;margin-bottom:4px;font-size:14px">📊 Googleスプレッドシート連携</div>
+      <p style="font-size:11px;color:#1e40af;margin-bottom:8px">AI日報をGoogleスプレッドシートに自動送信します。GASウェブアプリのURLを設定してください。</p>
+      <input type="url" id="gasWebhookUrl" placeholder="https://script.google.com/macros/s/..." style="width:100%;font-size:12px;border:1px solid #bfdbfe;border-radius:6px;padding:6px 8px;margin-bottom:6px;box-sizing:border-box">
+      <button onclick="saveWebhookUrl()" style="width:100%;padding:8px;background:#1d4ed8;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600">保存</button>
+      <div id="webhookSaveStatus" style="font-size:11px;margin-top:4px"></div>
+    </div>
+    <a href="mailto:kenji.kys@gmail.com" class="btn btn-primary mt-2 text-sm">メールで問い合わせる</a>
     </div>
   </div>
 
@@ -1229,7 +1236,8 @@ function initExport(){const now=new Date();const sel=document.getElementById('ex
 async function downloadCsv(type='visit-records', label='訪問記録'){const y=document.getElementById('exportYear').value;const m=document.getElementById('exportMonth').value;const r=await fetch(`${API}/export/${type}?year=${y}&month=${m}`,{headers:{'Authorization':'Bearer '+token}});if(!r.ok){alert('データがありません');return;}const blob=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${label}_${y}年${String(m).padStart(2,'0')}月.csv`;a.click();}
 
 // ── settings ──
-async function loadSettings(){const me=await api('GET','/me');if(me){const planLabel={trial:'トライアル',standard:'スタンダード'};document.getElementById('planBadge')&&(document.getElementById('planBadge').textContent=planLabel[me.plan]||me.plan);document.getElementById('planInfo').innerHTML=`<div>プラン: <strong>${planLabel[me.plan]||me.plan}</strong></div><div>ステータス: <strong>${me.subscription_status==='trial'?'無料トライアル中':'有効'}</strong></div>${me.trial_end?`<div class="text-gray-400 text-xs mt-1">トライアル終了: ${me.trial_end?.slice(0,10)}</div>`:''}`;const isPaid=me.subscription_status==='active';const up=document.getElementById('stripe-upgrade-area');const pt=document.getElementById('stripe-portal-area');if(up)up.style.display=isPaid?'none':'block';if(pt)pt.style.display=isPaid?'block':'none';
+async function loadSettings(){
+  loadWebhookUrl();const me=await api('GET','/me');if(me){const planLabel={trial:'トライアル',standard:'スタンダード'};document.getElementById('planBadge')&&(document.getElementById('planBadge').textContent=planLabel[me.plan]||me.plan);document.getElementById('planInfo').innerHTML=`<div>プラン: <strong>${planLabel[me.plan]||me.plan}</strong></div><div>ステータス: <strong>${me.subscription_status==='trial'?'無料トライアル中':'有効'}</strong></div>${me.trial_end?`<div class="text-gray-400 text-xs mt-1">トライアル終了: ${me.trial_end?.slice(0,10)}</div>`:''}`;const isPaid=me.subscription_status==='active';const up=document.getElementById('stripe-upgrade-area');const pt=document.getElementById('stripe-portal-area');if(up)up.style.display=isPaid?'none':'block';if(pt)pt.style.display=isPaid?'block':'none';
   newMode=me.new_mode||0;
   const btn=document.getElementById('toggleNewModeBtn');
   if(btn) btn.textContent=newMode?'✅ 国保連請求モード：有効（無効にする）':'💴 国保連請求モード：無効（有効にする）';
