@@ -58,7 +58,7 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
 .service-check{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f9fafb;border-radius:10px;margin-bottom:6px;cursor:pointer}
 .service-check input[type=checkbox]{width:20px;height:20px;accent-color:var(--blue)}
 .helper-card{background:#fff;border-radius:14px;box-shadow:0 2px 6px rgba(0,0,0,.07);padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer}
-.avatar{width:44px;height:44px;border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0}
+.avatar{width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0;object-fit:cover;overflow:hidden}
 .tab-bar{display:flex;background:#f3f4f6;border-radius:10px;padding:3px;margin-bottom:14px}
 .tab-item{flex:1;text-align:center;padding:7px 4px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#6b7280}
 .tab-item.active{background:#fff;color:var(--blue);box-shadow:0 1px 4px rgba(0,0,0,.1)}
@@ -318,6 +318,9 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
       </button>
       <button class="card text-center cursor-pointer" onclick="showPage('incidents')">
         <div class="text-3xl mb-1">⚠️</div><div class="font-bold text-sm">ヒヤリハット</div>
+      </button>
+      <button class="card text-center cursor-pointer" onclick="showPage('call-records');loadCallRecords()">
+        <div class="text-3xl mb-1">🎤</div><div class="font-bold text-sm">面談記録</div>
       </button>
       <button class="card text-center cursor-pointer" onclick="showPage('export')">
         <div class="text-3xl mb-1">📥</div><div class="font-bold text-sm">データ出力</div>
@@ -619,6 +622,14 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
     <div class="font-bold text-lg mb-4" id="clientModalTitle">利用者を追加</div>
     <button id="clientVcBtn" style="display:none;width:100%;margin-bottom:12px;background:#f0eeff;color:#6c63ff;border:2px solid #6c63ff;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;text-align:center">🎥 担当者会議ルームを発行</button>
     <input type="hidden" id="editClientId">
+<div style="text-align:center;margin-bottom:12px">
+  <label for="clientPhotoInput" style="cursor:pointer;display:inline-block;position:relative">
+    <img id="clientPhotoPreview" src="" style="width:160px;height:160px;border-radius:16px;object-fit:cover;border:2px solid #14b8a6;background:#e2e8f0;display:block">
+    <span style="position:absolute;bottom:0;right:0;background:#14b8a6;color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px">📷</span>
+  </label>
+  <input type="file" id="clientPhotoInput" accept="image/*" style="display:none" onchange="uploadClientPhoto(this)">
+  <div id="clientPhotoStatus" style="font-size:10px;color:#9ca3af;margin-top:3px"></div>
+</div>
     <div class="grid grid-cols-2 gap-3">
       <div class="col-span-2"><label>氏名</label><input id="cName" type="text" placeholder="山田 花子"></div>
       <div class="col-span-2"><label>ふりがな</label><input id="cKana" type="text" placeholder="やまだ はなこ"></div>
@@ -646,6 +657,14 @@ label{font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;display:blo
     <div class="modal-handle"></div>
     <div class="font-bold text-lg mb-4" id="helperModalTitle">ヘルパーを追加</div>
     <input type="hidden" id="editHelperId">
+<div style="text-align:center;margin-bottom:12px">
+  <label for="helperPhotoInput" style="cursor:pointer;display:inline-block;position:relative">
+    <img id="helperPhotoPreview" src="" style="width:160px;height:160px;border-radius:16px;object-fit:cover;border:2px solid #14b8a6;background:#e2e8f0;display:block">
+    <span style="position:absolute;bottom:0;right:0;background:#14b8a6;color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px">📷</span>
+  </label>
+  <input type="file" id="helperPhotoInput" accept="image/*" style="display:none" onchange="uploadHelperPhoto(this)">
+  <div id="helperPhotoStatus" style="font-size:10px;color:#9ca3af;margin-top:3px"></div>
+</div>
     <div class="grid grid-cols-2 gap-3">
       <div class="col-span-2"><label>氏名</label><input id="hName" type="text"></div>
       <div class="col-span-2"><label>ふりがな</label><input id="hKana" type="text"></div>
@@ -1154,7 +1173,7 @@ function renderClients(list) {
   const colors=['bg-blue-100 text-blue-700','bg-teal-100 text-teal-700','bg-purple-100 text-purple-700','bg-amber-100 text-amber-700'];
   el.innerHTML=list.map(c=>`
     <div class="helper-card" onclick="openClientModal(clients.find(x=>x.id===${c.id}))">
-      <div class="avatar ${colors[c.id%4]}">${c.name[0]}</div>
+      ${c.photo_url?`<img class="avatar" src="${c.photo_url}" alt="">`:`<div class="avatar ${colors[c.id%4]}">${c.name[0]}</div>`}
       <div class="flex-1">
         <div class="font-bold text-gray-800">${c.name}</div>
         <div class="flex gap-1 mt-1 flex-wrap">
@@ -1194,7 +1213,7 @@ async function loadHelpers() {
   const empLabel={full:'常勤',part:'非常勤',temp:'登録'};
   el.innerHTML=helpers.map(h=>`
     <div class="helper-card" onclick="openHelperModal(helpers.find(x=>x.id===${h.id}))">
-      <div class="avatar bg-green-100 text-green-700">${h.name[0]}</div>
+      ${h.photo_url?`<img class="avatar" src="${h.photo_url}" alt="">`:`<div class="avatar bg-green-100 text-green-700">${h.name[0]}</div>`}
       <div class="flex-1">
         <div class="font-bold">${h.name}</div>
         <div class="flex gap-1 mt-1 flex-wrap">
@@ -1877,6 +1896,73 @@ async function loadTokuteiCheck() {
 </script>
 
 <!-- ビデオ通話モーダル -->
+  <!-- 面談記録ページ -->
+  <div id="page-call-records" class="page">
+    <div class="flex items-center justify-between mb-3">
+      <div class="section-title mb-0">🎤 面談記録</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="vcOpenFaceRec()" style="background:#065f46;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;font-weight:600">🎤 新規録音</button>
+        <a href="/houmon/api/call-records/csv" style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;font-weight:500;text-decoration:none;color:#374151">📥 CSV</a>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <input id="crFilterMember" placeholder="対象者名で絞込" oninput="crDebounce()" style="flex:1;min-width:120px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px">
+      <select id="crFilterSource" onchange="loadCallRecords()" style="padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:#fff">
+        <option value="">全通話種別</option>
+        <option value="video">📹 ビデオ通話</option>
+        <option value="face">🎤 対面録音</option>
+      </select>
+      <select id="crFilterType" onchange="loadCallRecords()" style="padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:#fff">
+        <option value="">全記録種別</option>
+        <optgroup label="対面録音">
+          <option value="訪問記録（サービス提供記録）">訪問記録（サービス提供記録）</option>
+          <option value="モニタリング面談記録">モニタリング面談記録</option>
+          <option value="サービス担当者会議記録">サービス担当者会議記録</option>
+        </optgroup>
+        <optgroup label="ビデオ通話">
+          <option value="利用者・ご家族との連絡">利用者・ご家族との連絡</option>
+          <option value="主治医・医療機関との連携">主治医・医療機関との連携</option>
+          <option value="ケアマネジャーとの連絡調整">ケアマネジャーとの連絡調整</option>
+          <option value="サービス担当者会議">サービス担当者会議</option>
+          <option value="スタッフ間ミーティング">スタッフ間ミーティング</option>
+        </optgroup>
+      </select>
+    </div>
+    <div id="crList"><p style="font-size:13px;color:#9ca3af;text-align:center;padding:20px">読み込み中...</p></div>
+  </div>
+
+  <!-- 面談記録 編集モーダル -->
+  <div id="crModal" onclick="if(event.target===this)closeCrModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto">
+    <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:640px;margin:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-size:16px;font-weight:700">📝 面談記録を編集</div>
+        <button onclick="closeCrModal()" style="color:#9ca3af;font-size:22px;background:none;border:none;cursor:pointer">✕</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div><label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px">対象者</label>
+          <input id="crEditMember" style="width:100%;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box"></div>
+        <div><label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px">記録種別</label>
+          <input id="crEditType" style="width:100%;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box"></div>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px">AI要約（編集可）</label>
+        <textarea id="crEditSummary" rows="8" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;line-height:1.6;resize:vertical;box-sizing:border-box"></textarea>
+      </div>
+      <div style="margin-bottom:18px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <label style="font-size:12px;color:#6b7280">文字起こし全文（編集可）</label>
+          <button onclick="toggleTranscript()" id="crTranscriptToggle" style="font-size:11px;color:#6c63ff;background:none;border:none;cursor:pointer;padding:0">▼ 表示</button>
+        </div>
+        <textarea id="crEditTranscript" rows="6" style="display:none;width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;line-height:1.6;resize:vertical;box-sizing:border-box;color:#555"></textarea>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button onclick="closeCrModal()" style="flex:1;padding:11px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;cursor:pointer">キャンセル</button>
+        <button onclick="saveCrRecord()" style="flex:2;padding:11px;background:#065f46;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">💾 保存する</button>
+      </div>
+      <div id="crSaveMsg" style="margin-top:10px;text-align:center;font-size:13px;color:#059669;display:none">✅ 保存しました</div>
+    </div>
+  </div>
+
 <div id="vcModal" onclick="if(event.target===this)closeVcModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;padding:16px">
   <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
@@ -1884,6 +1970,17 @@ async function loadTokuteiCheck() {
       <button onclick="closeVcModal()" style="color:#9ca3af;font-size:22px;line-height:1;background:none;border:none;cursor:pointer;padding:0">✕</button>
     </div>
     <div style="margin-bottom:14px">
+      <div style="font-size:12px;color:#6b7280;margin-bottom:8px;font-weight:500">📋 面談記録設定（任意）</div>
+      <select id="vcRecordType" style="width:100%;padding:9px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:#fff;margin-bottom:8px">
+        <option value="">記録タイプを選択...</option>
+        <option value="利用者・ご家族との連絡">利用者・ご家族との連絡</option>
+        <option value="主治医・医療機関との連携">主治医・医療機関との連携</option>
+        <option value="ケアマネジャーとの連絡調整">ケアマネジャーとの連絡調整</option>
+        <option value="サービス担当者会議">サービス担当者会議</option>
+        <option value="スタッフ間ミーティング">スタッフ間ミーティング</option>
+      </select>
+      <input id="vcMemberName" placeholder="利用者名・相手のお名前（省略可）" maxlength="30"
+        style="width:100%;padding:9px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;margin-bottom:12px">
       <div style="font-size:12px;color:#6b7280;margin-bottom:8px;font-weight:500">通話の種類</div>
       <div id="vcPresets" style="display:flex;flex-wrap:wrap;gap:8px">
         <button type="button" onclick="vcSelectRandom(this,'houmon-hq')" style="border:2px solid #e5e7eb;border-radius:20px;padding:7px 14px;font-size:13px;cursor:pointer;font-weight:500;color:#374151;background:#f3f4f6;white-space:nowrap">本部と通話</button>
@@ -1903,8 +2000,11 @@ async function loadTokuteiCheck() {
       <button onclick="vcCopyUrl()" id="vcCopyBtn" style="padding:11px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;cursor:pointer;font-weight:500">📋 URLをコピー</button>
       <button onclick="vcOpenUrl()" style="padding:11px;background:#6c63ff;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">📹 通話開始</button>
     </div>
+    <div style="margin-top:10px">
+      <button onclick="vcOpenFaceRec()" style="width:100%;padding:11px;background:#065f46;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🎤 対面録音モード（文字起こし・AI記録）</button>
+    </div>
     <div style="margin-top:10px;text-align:center">
-      <a href="https://meet.gaiaarts.org/booking/dashboard?mode=welfare" target="_blank" style="font-size:11px;color:#9ca3af;text-decoration:none">⚙ NiceMeet管理画面 →</a>
+      <a href="#" onclick="openRecordsDashboard();return false;" style="font-size:11px;color:#9ca3af;text-decoration:none">⚙ NiceMeet管理画面 →</a>
     </div>
   </div>
 </div>
@@ -1917,10 +2017,92 @@ function vcGetRoom(){var v=document.getElementById('vcCurVal').value;return(v.st
 function vcMakeUrl(room,withName){var u='https://meet.gaiaarts.org/?room='+encodeURIComponent(room)+'&system=houmon';if(withName&&officeName)u+='&name='+encodeURIComponent(officeName);return u;}
 function vcUpdateUrl(){var room=vcGetRoom();document.getElementById('vcUrlText').textContent=room?vcMakeUrl(room,false):'';}
 function vcCopyUrl(){var room=vcGetRoom();var url=room?vcMakeUrl(room,false):'';if(!url)return;navigator.clipboard.writeText(url).then(function(){var b=document.getElementById('vcCopyBtn');b.textContent='✅ コピーしました';setTimeout(function(){b.textContent='📋 URLをコピー';},2000);});}
-function vcOpenUrl(){var room=vcGetRoom();if(room)window.open(vcMakeUrl(room,true),'_blank');}
+async function vcOpenUrl(){var room=vcGetRoom();if(!room)return;var win=window.open('','_blank');var recType=encodeURIComponent((document.getElementById('vcRecordType')||{}).value||'');var memName=encodeURIComponent((document.getElementById('vcMemberName')||{}).value||'');var extra=(recType?'&recordType='+recType:'')+(memName?'&memberName='+memName:'');try{var r=await api('GET','/nicemeet-sso-url?room='+encodeURIComponent(room)+extra);if(r&&r.url){if(win)win.location=r.url;return;}}catch(e){}if(win)win.location=vcMakeUrl(room,true)+extra;}
+async function openRecordsDashboard(){var win=window.open('','_blank');try{var r=await api('GET','/nicemeet-sso-url?dest=/booking/dashboard');if(r&&r.url){if(win)win.location=r.url;return;}}catch(e){}if(win)win.location='https://meet.gaiaarts.org/booking/dashboard?mode=welfare';}
+async function vcOpenFaceRec(){
+  closeVcModal();
+  var win=window.open('','_blank');
+  try{var r=await api('GET','/nicemeet-sso-url');if(r&&r.url){if(win)win.location=r.url;return;}}catch(e){}
+  if(win)win.location='https://meet.gaiaarts.org/record?system=houmon';
+}
+// ── 面談記録 ────────────────────────────────────────────────────────
+let crCurrentId = null;
+let crDebTimer = null;
+function crDebounce(){ clearTimeout(crDebTimer); crDebTimer=setTimeout(loadCallRecords, 400); }
+async function loadCallRecords(){
+  const member = document.getElementById('crFilterMember')?.value || '';
+  const rtype  = document.getElementById('crFilterType')?.value  || '';
+  let qs = '';
+  if(member) qs += '&member=' + encodeURIComponent(member);
+  var rsource = (document.getElementById('crFilterSource')||{}).value || '';
+  if(rsource) qs += '&source=' + encodeURIComponent(rsource);
+  if(rtype)   qs += '&record_type=' + encodeURIComponent(rtype);
+  const el = document.getElementById('crList');
+  if(!el) return;
+  try {
+    const d = await api('GET', '/call-records?' + qs.slice(1));
+    if(!d || !d.records || !d.records.length){
+      el.innerHTML='<p style="font-size:13px;color:#9ca3af;text-align:center;padding:20px">まだ面談記録がありません</p>';
+      return;
+    }
+    el.innerHTML = d.records.map(function(r) {
+      var dt = r.created_at ? r.created_at.slice(0,10) : '';
+      var preview = (r.summary_text||'').replace(/[\n\r]/g,' ').slice(0,60);
+      var rJson = JSON.stringify(r).replace(/'/g, '&#39;');
+      return '<div class="card mb-2" onclick="openCrModal(this)" data-record=\''+rJson+'\' style="border-left:4px solid #065f46;cursor:pointer">'
+        + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">'
+        + '<div style="font-weight:700;font-size:14px">'+(r.member_name||'（対象者未入力）')
+        + (r.source === 'face'
+            ? '<span style="font-size:10px;background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;border-radius:4px;padding:1px 5px;margin-left:6px">🎤 対面</span>'
+            : '<span style="font-size:10px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:4px;padding:1px 5px;margin-left:6px">📹 ビデオ</span>')
+        + '</div>'
+        + '<div style="font-size:11px;color:#9ca3af;flex-shrink:0;margin-left:8px">'+dt+'</div>'
+        + '</div>'
+        + '<div style="font-size:12px;color:#6b7280;margin-bottom:4px">'+(r.record_type||'')+(r.staff_name?' / '+r.staff_name:'')+'</div>'
+        + '<div style="font-size:12px;color:#374151;line-height:1.5">'+preview+(preview.length>=60?'…':'')+'</div>'
+        + '</div>';
+    }).join('');
+  } catch(e) {
+    el.innerHTML='<p style="font-size:13px;color:#e74c3c;text-align:center;padding:20px">読み込みエラー</p>';
+  }
+}
+function openCrModal(el){
+  var r = JSON.parse(el.getAttribute('data-record').replace(/&#39;/g,"'"));
+  crCurrentId = r.id;
+  document.getElementById('crEditMember').value   = r.member_name  || '';
+  document.getElementById('crEditType').value     = r.record_type  || '';
+  document.getElementById('crEditSummary').value  = r.summary_text || '';
+  document.getElementById('crEditTranscript').value = r.raw_transcript || '';
+  document.getElementById('crEditTranscript').style.display = 'none';
+  document.getElementById('crTranscriptToggle').textContent = '▼ 表示';
+  document.getElementById('crSaveMsg').style.display = 'none';
+  document.getElementById('crModal').style.display = 'flex';
+}
+function closeCrModal(){ document.getElementById('crModal').style.display='none'; crCurrentId=null; }
+function toggleTranscript(){
+  const ta = document.getElementById('crEditTranscript');
+  const btn = document.getElementById('crTranscriptToggle');
+  if(ta.style.display==='none'){ ta.style.display='block'; btn.textContent='▲ 閉じる'; }
+  else { ta.style.display='none'; btn.textContent='▼ 表示'; }
+}
+async function saveCrRecord(){
+  if(!crCurrentId) return;
+  const body = {
+    member_name:    document.getElementById('crEditMember').value,
+    record_type:    document.getElementById('crEditType').value,
+    summary_text:   document.getElementById('crEditSummary').value,
+    raw_transcript: document.getElementById('crEditTranscript').value,
+  };
+  const r = await api('PUT', '/call-records/'+crCurrentId, body);
+  if(r && r.ok){
+    const msg = document.getElementById('crSaveMsg');
+    msg.style.display='block';
+    setTimeout(()=>{ msg.style.display='none'; closeCrModal(); loadCallRecords(); }, 1500);
+  }
+}
 function vcSelectRandom(el,prefix){var a=new Uint8Array(6);crypto.getRandomValues(a);var roomId=prefix+'-'+Array.from(a).map(function(b){return b.toString(16).padStart(2,'0');}).join('');document.querySelectorAll('#vcPresets button').forEach(function(b){b.style.borderColor='#e5e7eb';b.style.background='#f3f4f6';b.style.color='#374151';});el.style.borderColor='#6c63ff';el.style.background='#f0eeff';el.style.color='#6c63ff';document.getElementById('vcCustomWrap').style.display='block';var inp=document.getElementById('vcCustomRoom');inp.value=roomId;inp.readOnly=false;inp.style.background='';inp.style.color='#6c63ff';inp.style.fontWeight='700';document.getElementById('vcCurVal').value='_custom_';vcUpdateUrl();}
 function generateRoomId(prefix){var a=new Uint8Array(6);crypto.getRandomValues(a);return (prefix||'owl')+'-'+Array.from(a).map(function(b){return b.toString(16).padStart(2,'0');}).join('');}
-function openVcModalWith(roomId,name){  document.getElementById('vcModal').style.display='flex';  document.querySelectorAll('#vcPresets button').forEach(function(b){    b.style.borderColor='#e5e7eb';b.style.background='#f3f4f6';b.style.color='#374151';});  document.getElementById('vcCurVal').value='_vcgen_';  document.getElementById('vcCustomWrap').style.display='block';  var inp=document.getElementById('vcCustomRoom');  inp.value=roomId;inp.readOnly=true;inp.style.background='#f8f9fa';inp.style.color='#6c63ff';inp.style.fontWeight='700';  vcUpdateUrl();}
+function openVcModalWith(roomId,name){  document.getElementById('vcModal').style.display='flex';  document.getElementById('vcCurVal').value='_vcgen_';  var wrap=document.getElementById('vcCustomWrap');if(wrap)wrap.style.display='block';  var inp=document.getElementById('vcCustomRoom');  inp.value=roomId;inp.readOnly=true;inp.style.background='#f8f9fa';inp.style.color='#6c63ff';inp.style.fontWeight='700';  vcUpdateUrl();}
 function vcResetInput(){var inp=document.getElementById('vcCustomRoom');inp.readOnly=false;inp.style.background='';inp.style.color='';inp.style.fontWeight='';}
 
 // ── Stripe決済 ──────────────────────────────────
@@ -1942,6 +2124,18 @@ if(new URLSearchParams(location.search).get('stripe')==='success'){
   setTimeout(()=>alert('🎉 有料プランが有効になりました！'), 500);
   history.replaceState({}, '', location.pathname);
 }
+
+// ── photo upload functions ──
+
+async function compressImage(file,maxW,maxH,quality){maxW=maxW||1200;maxH=maxH||1200;quality=quality||0.82;return new Promise(function(resolve){var reader=new FileReader();reader.onload=function(e){var img=new Image();img.onload=function(){var w=img.width,h=img.height;if(w>maxW||h>maxH){var ratio=Math.min(maxW/w,maxH/h);w=Math.round(w*ratio);h=Math.round(h*ratio);}var canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;canvas.getContext('2d').drawImage(img,0,0,w,h);canvas.toBlob(function(blob){resolve(blob);},'image/jpeg',quality);};img.src=e.target.result;};reader.readAsDataURL(file);});}
+
+async function uploadClientPhoto(input){const eid=document.getElementById('editClientId').value;if(!eid){document.getElementById('clientPhotoStatus').textContent='先に基本情報を保存してください';input.value='';return;}document.getElementById('clientPhotoStatus').textContent='アップロード中...';const _blob=await compressImage(input.files[0]);const fd=new FormData();fd.append('file',_blob,'photo.jpg');try{const r=await fetch(`/houmon/api/clients/${eid}/photo`,{method:'PUT',body:fd,headers:{'Authorization':'Bearer '+token}});if(r.ok){const d=await r.json();document.getElementById('clientPhotoPreview').src=d.photo_url;document.getElementById('clientPhotoStatus').textContent='✅ 更新しました';}else{document.getElementById('clientPhotoStatus').textContent='❌ エラー'+r.status;}}catch(e){document.getElementById('clientPhotoStatus').textContent='❌ エラー';}input.value='';}
+
+(function(){const _o=openClientModal;openClientModal=function(){_o.apply(this,arguments);const _id=document.getElementById('editClientId');const _img=document.getElementById('clientPhotoPreview');const _st=document.getElementById('clientPhotoStatus');const _data=arguments[0];if(_img)_img.src=(_data&&_data.photo_url)?_data.photo_url:'';if(_st)_st.textContent='';};})();
+
+async function uploadHelperPhoto(input){const eid=document.getElementById('editHelperId').value;if(!eid){document.getElementById('helperPhotoStatus').textContent='先に基本情報を保存してください';input.value='';return;}document.getElementById('helperPhotoStatus').textContent='アップロード中...';const _blob=await compressImage(input.files[0]);const fd=new FormData();fd.append('file',_blob,'photo.jpg');try{const r=await fetch(`/houmon/api/helpers/${eid}/photo`,{method:'PUT',body:fd,headers:{'Authorization':'Bearer '+token}});if(r.ok){const d=await r.json();document.getElementById('helperPhotoPreview').src=d.photo_url;document.getElementById('helperPhotoStatus').textContent='✅ 更新しました';}else{document.getElementById('helperPhotoStatus').textContent='❌ エラー'+r.status;}}catch(e){document.getElementById('helperPhotoStatus').textContent='❌ エラー';}input.value='';}
+
+(function(){const _o=openHelperModal;openHelperModal=function(){_o.apply(this,arguments);const _id=document.getElementById('editHelperId');const _img=document.getElementById('helperPhotoPreview');const _st=document.getElementById('helperPhotoStatus');const _data=arguments[0];if(_img)_img.src=(_data&&_data.photo_url)?_data.photo_url:'';if(_st)_st.textContent='';};})();
 </script>
 </body>
 </html>

@@ -16,6 +16,13 @@ except ImportError:
 
 from database import get_db, init_db
 
+# ── photo upload setup ────────────────────────────────────────
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "static", "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+MAX_SIZE = 10 * 1024 * 1024  # 10MB
+
+
 SECRET_KEY = os.environ.get("SECRET_KEY") or (_ for _ in ()).throw(ValueError("SECRET_KEY env var not set"))
 ALGORITHM = "HS256"
 
@@ -227,7 +234,8 @@ def send_gmail(to: str, subject: str, body: str):
 @app.get("/", response_class=HTMLResponse)
 @app.get("", response_class=HTMLResponse)
 async def index():
-    with open("static/index.html", encoding="utf-8") as f: return f.read()
+    with open("static/index.html", encoding="utf-8") as f: c2=f.read()
+    return HTMLResponse(c2, headers={"Cache-Control":"no-store"})
 
 # ── auth ──────────────────────────────────────────────────────
 @app.post("/api/register")
@@ -1845,3 +1853,180 @@ async def stripe_webhook(request: Request):
         print(f"[stripe-webhook] payment failed customer={customer_id}")
     return {"received": True}
 
+
+# ── person photo endpoints ──────────────────────────────────
+
+@app.put("/api/clients/{cid}/photo")
+async def upload_client_photo(cid: int, file: UploadFile = File(...), oid: int = Depends(current_office)):
+    if file.content_type not in ALLOWED_TYPES:
+        raise HTTPException(400, "画像ファイルのみアップロードできます")
+    data = await file.read()
+    if len(data) > MAX_SIZE:
+        raise HTTPException(400, "10MB以下にしてください")
+    if not any(data[:len(m)] == m for m in (b'\xff\xd8\xff', b'\x89PNG', b'RIFF', b'GIF8', b'GIF9')):
+        raise HTTPException(400, "有効な画像ファイルではありません")
+    import base64 as _b64
+    photo_url = "data:image/jpeg;base64," + _b64.b64encode(data).decode()
+    db = get_db()
+    cur = db.execute("UPDATE clients SET photo_url=? WHERE id=? AND office_id=?", (photo_url, cid, oid))
+    if cur.rowcount == 0:
+        db.close()
+        raise HTTPException(404, "対象が見つかりません")
+    db.commit()
+    db.close()
+    return {"photo_url": photo_url}
+
+@app.put("/api/helpers/{hid}/photo")
+async def upload_helper_photo(hid: int, file: UploadFile = File(...), oid: int = Depends(current_office)):
+    if file.content_type not in ALLOWED_TYPES:
+        raise HTTPException(400, "画像ファイルのみアップロードできます")
+    data = await file.read()
+    if len(data) > MAX_SIZE:
+        raise HTTPException(400, "10MB以下にしてください")
+    if not any(data[:len(m)] == m for m in (b'\xff\xd8\xff', b'\x89PNG', b'RIFF', b'GIF8', b'GIF9')):
+        raise HTTPException(400, "有効な画像ファイルではありません")
+    import base64 as _b64
+    photo_url = "data:image/jpeg;base64," + _b64.b64encode(data).decode()
+    db = get_db()
+    cur = db.execute("UPDATE helpers SET photo_url=? WHERE id=? AND office_id=?", (photo_url, hid, oid))
+    if cur.rowcount == 0:
+        db.close()
+        raise HTTPException(404, "対象が見つかりません")
+    db.commit()
+    db.close()
+    return {"photo_url": photo_url}
+
+
+# ── NiceMeet SSO (video call) ──────────────────────
+@app.get("/api/nicemeet-sso-url")
+async def nicemeet_sso_url(room: Optional[str] = None, dest: Optional[str] = None,
+                          recordType: Optional[str] = None, memberName: Optional[str] = None,
+                          _oid: int = Depends(current_office)):
+    import json as _ssoj, base64 as _ssob64, hmac as _ssohmac, hashlib as _ssohl, time as _ssot, os as _ssoos
+    from urllib.parse import quote as _q
+    secret = _ssoos.environ.get("WELFARE_SSO_SECRET", "")
+    if not secret:
+        raise HTTPException(500, "SSO not configured")
+    db = get_db()
+    row = db.execute("SELECT office_name, email FROM offices WHERE id=?", (_oid,)).fetchone()
+    db.close()
+    if not row:
+        raise HTTPException(404)
+    name = row["office_name"]
+    _payload = _ssoj.dumps({
+        "office_name": name,
+        "email": row["email"] or ("houmon_" + str(_oid) + "@welfare.local"),
+        "system": "houmon",
+        "exp": int(_ssot.time()) + 300,
+    }, separators=(",", ":"), sort_keys=True)
+    _b64 = _ssob64.urlsafe_b64encode(_payload.encode()).decode()
+    _sig = _ssohmac.new(secret.encode(), _b64.encode(), _ssohl.sha256).hexdigest()
+    token = _b64 + "." + _sig
+    if dest:
+        final_dest = dest
+    elif room:
+        extras = ""
+        if recordType:
+            extras += "&recordType=" + _q(recordType)
+        if memberName:
+            extras += "&memberName=" + _q(memberName)
+        final_dest = "/?room=" + room + "&system=houmon&name=" + _q(name) + extras
+    else:
+        final_dest = "/record?system=houmon"
+    url = "https://meet.gaiaarts.org/api/welfare-sso?token=" + _q(token) + "&dest=" + _q(final_dest)
+    return {"url": url}
+
+
+# ── 面談記録（NiceMeet DB連携・対面録音/ビデオ通話）──────────────
+NM_DB_PATH = "/home/ubuntu/meet/data/booking.db"
+
+def get_nm_db():
+    import sqlite3 as _sq
+    db = _sq.connect(NM_DB_PATH)
+    db.row_factory = _sq.Row
+    return db
+
+def get_facility_id(office_email: str):
+    """事業所メールからNiceMeetのfacility_idを取得"""
+    try:
+        db = get_nm_db()
+        row = db.execute("SELECT facility_id FROM users WHERE email=?", (office_email,)).fetchone()
+        db.close()
+        return row["facility_id"] if row and row["facility_id"] else None
+    except:
+        return None
+
+@app.get("/api/call-records")
+async def list_call_records(member: Optional[str] = None, record_type: Optional[str] = None,
+                            source: Optional[str] = None, _crfid: int = Depends(current_office)):
+    db = get_db()
+    row = db.execute("SELECT office_name, email FROM offices WHERE id=?", (_crfid,)).fetchone()
+    db.close()
+    if not row: raise HTTPException(404)
+    facility_id = get_facility_id(row["email"])
+    if not facility_id:
+        return {"records": []}
+    nm = get_nm_db()
+    sql = "SELECT * FROM nm_call_records WHERE facility_id=?"
+    params = [facility_id]
+    if member:
+        sql += " AND member_name LIKE ?"; params.append(f"%{member}%")
+    if record_type:
+        sql += " AND record_type=?"; params.append(record_type)
+    if source:
+        sql += " AND source=?"; params.append(source)
+    sql += " ORDER BY created_at DESC LIMIT 200"
+    rows = nm.execute(sql, params).fetchall()
+    nm.close()
+    return {"records": [dict(r) for r in rows]}
+
+@app.put("/api/call-records/{record_id}")
+async def update_call_record(record_id: int, req: Request, _crfid: int = Depends(current_office)):
+    body = await req.json()
+    db = get_db()
+    row = db.execute("SELECT email FROM offices WHERE id=?", (_crfid,)).fetchone()
+    db.close()
+    if not row: raise HTTPException(404)
+    facility_id = get_facility_id(row["email"])
+    if not facility_id: raise HTTPException(403)
+    nm = get_nm_db()
+    existing = nm.execute("SELECT id FROM nm_call_records WHERE id=? AND facility_id=?",
+                          (record_id, facility_id)).fetchone()
+    if not existing:
+        nm.close(); raise HTTPException(404)
+    fields = []; params = []
+    for _f in ("summary_text", "raw_transcript", "member_name", "record_type"):
+        if _f in body:
+            fields.append(_f + "=?"); params.append(body[_f])
+    if not fields:
+        nm.close(); raise HTTPException(400, "no fields")
+    params.append(record_id)
+    nm.execute(f"UPDATE nm_call_records SET {', '.join(fields)} WHERE id=?", params)
+    nm.commit(); nm.close()
+    return {"ok": True}
+
+@app.get("/api/call-records/csv")
+async def export_call_records_csv(_crfid: int = Depends(current_office)):
+    import io as _crio
+    from fastapi.responses import StreamingResponse as _CRStream
+    db = get_db()
+    row = db.execute("SELECT email, office_name FROM offices WHERE id=?", (_crfid,)).fetchone()
+    db.close()
+    if not row: raise HTTPException(404)
+    facility_id = get_facility_id(row["email"])
+    if not facility_id:
+        return _CRStream(_crio.StringIO("記録なし\n"), media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=call_records.csv"})
+    nm = get_nm_db()
+    rows = nm.execute("SELECT * FROM nm_call_records WHERE facility_id=? ORDER BY created_at DESC",
+                      (facility_id,)).fetchall()
+    nm.close()
+    output = _crio.StringIO()
+    output.write("﻿")
+    output.write("記録ID,記録種別,対象者,担当職員,面談日,作成日時,AI要約,文字起こし\n")
+    for r in rows:
+        def esc(v): return '"' + str(v or '').replace('"', '""').replace('\n', ' ') + '"'
+        output.write(f"{r['id']},{esc(r['record_type'])},{esc(r['member_name'])},{esc(r['staff_name'])},{r['interview_date'] or ''},{r['created_at'] or ''},{esc(r['summary_text'])},{esc(r['raw_transcript'])}\n")
+    output.seek(0)
+    return _CRStream(output, media_type="text/csv; charset=utf-8-sig",
+        headers={"Content-Disposition": "attachment; filename=call_records.csv"})
